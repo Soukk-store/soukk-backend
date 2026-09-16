@@ -7,7 +7,10 @@ authors = [
     { name = "mhmdshamii", email = "mhmddshamii@gmail.com" }
 ]
 requires-python = ">=3.14"
-dependencies = []
+dependencies = [
+    "fastapi>=0.141.1",
+    "uvicorn>=0.53.0",
+]
 
 [project.scripts]
 soukk-backend = "soukk_backend:main"

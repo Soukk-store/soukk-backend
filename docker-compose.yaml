@@ -8,9 +8,11 @@ services:
     container_name: soukk-backend
     restart: always
     ports:
-      - "8000:8000"
+      - "${PORT}:${PORT}"
     environment:
       ENV: ${ENV}
+      PORT: ${PORT}
+      WEB_WORKERS: ${WEB_WORKERS}
       DB_HOST: ${DB_HOST}
       DB_PORT: ${DB_PORT}
       DB_USER: ${DB_USER}
