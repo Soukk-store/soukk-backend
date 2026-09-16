@@ -1,0 +1,52 @@
+services:
+
+  # 2. FastAPI Backend Service
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: soukk-backend
+    restart: always
+    ports:
+      - "8000:8000"
+    environment:
+      ENV: ${ENV}
+      DB_HOST: ${DB_HOST}
+      DB_PORT: ${DB_PORT}
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
+      DB_NAME: ${DB_NAME}
+    depends_on:
+      postgres-db:
+        condition: service_healthy
+    networks:
+      - soukk-network
+
+  # 1. Database Service
+  postgres-db:
+    image: postgres:16
+    container_name: soukk-postgres
+    restart: always
+    environment:
+      POSTGRES_USER: soukk_user
+      POSTGRES_PASSWORD: soukk_secure_password
+      POSTGRES_DB: soukk_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - soukk-network
+
+volumes:
+  postgres_data:
+    driver: local
+
+networks:
+  soukk-network:
+    driver: bridge
