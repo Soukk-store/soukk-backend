@@ -4,9 +4,9 @@ import uvicorn
 
 app = FastAPI(title="Soukk Backend API")
 
-@app.get("/")
-def read_root():
-    return {"status": "online"}
+@app.get("/health")
+def health():
+    return {"status": "ok"}
 
 def main():
     port = int(os.getenv("PORT", "8000")) 
