@@ -19,6 +19,12 @@ services:
         condition: service_healthy
     networks:
       - soukk-network
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:${PORT}/health', timeout=3)"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
 
   postgres-db:
     image: postgres:16
