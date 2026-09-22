@@ -16,9 +16,13 @@ if config.config_file_name is not None:
 
 # add your model's MetaData object here
 # for 'autogenerate' support
-# from myapp import mymodel
-# target_metadata = mymodel.Base.metadata
-target_metadata = None
+from soukk_backend.database import Base
+from soukk_backend.domains.users.userModel import User  # noqa: F401
+from soukk_backend.settings import settings
+
+target_metadata = Base.metadata
+
+config.set_main_option("sqlalchemy.url", settings.database_url)
 
 # other values from the config, defined by the needs of env.py,
 # can be acquired:

@@ -1,6 +1,7 @@
-import os
 from fastapi import FastAPI
 import uvicorn
+
+from soukk_backend.settings import settings
 
 app = FastAPI(title="Soukk Backend API")
 
@@ -9,11 +10,13 @@ def health():
     return {"status": "ok"}
 
 def main():
-    port = int(os.getenv("PORT", "8000")) 
-    workers = int(os.getenv("WEB_WORKERS", "1"))
-    is_dev = os.getenv("ENV", "development").lower() == "development"
-    
-    uvicorn.run("soukk_backend:app", host="0.0.0.0", port=port, workers=workers,reload=is_dev if workers == 1 else False)
+    uvicorn.run(
+        "soukk_backend:app",
+        host="0.0.0.0",
+        port=settings.port,
+        workers=settings.web_workers,
+        reload=settings.is_dev if settings.web_workers == 1 else False,
+    )
 
 if __name__ == "__main__":
     main()
