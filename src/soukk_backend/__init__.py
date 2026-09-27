@@ -1,9 +1,12 @@
 from fastapi import FastAPI
 import uvicorn
 
+from soukk_backend.domains.auth.authController import router as auth_router
 from soukk_backend.settings import settings
 
 app = FastAPI(title="Soukk Backend API")
+
+app.include_router(auth_router)
 
 @app.get("/health")
 def health():
