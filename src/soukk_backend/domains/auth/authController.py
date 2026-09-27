@@ -2,7 +2,7 @@ from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request
 from pydantic import EmailStr
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from soukk_backend.core.email import send_verification_email
+from soukk_backend.core.email import send_password_reset_email, send_verification_email
 from soukk_backend.core.rateLimit import limiter
 from soukk_backend.database import get_db
 from soukk_backend.domains.auth import authService
@@ -15,10 +15,12 @@ from soukk_backend.domains.auth.authExceptions import (
     PhoneAlreadyExists,
 )
 from soukk_backend.domains.auth.authRequestSchema import (
+    ForgotPasswordRequest,
     LoginRequest,
     RefreshRequest,
     RegisterRequest,
     ResendVerificationRequest,
+    ResetPasswordRequest,
 )
 from soukk_backend.domains.auth.authResponseSchema import (
     EmailExistsResponse,
@@ -116,3 +118,29 @@ async def logout(data: RefreshRequest, db: AsyncSession = Depends(get_db)):
 @router.get("/me", response_model=UserOut)
 async def me(user: User = Depends(get_current_user)):
     return user
+
+
+@router.post("/forgot-password", status_code=202, response_model=MessageResponse)
+@limiter.limit(settings.rate_limit_forgot_password)
+async def forgot_password(
+    request: Request,
+    data: ForgotPasswordRequest,
+    background_tasks: BackgroundTasks,
+    db: AsyncSession = Depends(get_db),
+):
+    user = await authService.get_user_by_email(db, data.email)
+    if user is not None:
+        link = authService.build_password_reset_link(user)
+        background_tasks.add_task(send_password_reset_email, user.email, link)
+
+    return MessageResponse(message="If an account exists for this email, a reset link has been sent")
+
+
+@router.post("/reset-password", response_model=MessageResponse)
+async def reset_password(data: ResetPasswordRequest, db: AsyncSession = Depends(get_db)):
+    try:
+        await authService.reset_password(db, data.token, data.password)
+    except InvalidToken:
+        raise HTTPException(status_code=400, detail="Invalid or expired reset link")
+
+    return MessageResponse(message="Password has been reset, please log in again")

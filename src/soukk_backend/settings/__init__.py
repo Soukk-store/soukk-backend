@@ -13,6 +13,7 @@ class Settings(BaseSettings):
     port: int = 8000
     web_workers: int = 1
     server_url: str = "http://localhost:8000"
+    frontend_url: str
 
     db_host: str
     db_port: int = 5432
@@ -23,6 +24,7 @@ class Settings(BaseSettings):
     jwt_secret: str
     jwt_algorithm: str
     email_verify_expire_minutes: int
+    password_reset_expire_minutes: int
     access_token_expire_minutes: int
     refresh_token_expire_days: int
 
@@ -38,6 +40,7 @@ class Settings(BaseSettings):
     rate_limit_register: str
     rate_limit_resend: str
     rate_limit_login: str
+    rate_limit_forgot_password: str
 
     @property
     def is_dev(self) -> bool:

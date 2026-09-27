@@ -7,11 +7,14 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from soukk_backend.core.security import (
     ACCESS_PURPOSE,
     EMAIL_VERIFY_PURPOSE,
+    PASSWORD_RESET_PURPOSE,
     REFRESH_PURPOSE,
     create_token,
+    decode_claims,
     decode_token,
     decode_token_id,
     hash_password,
+    password_fingerprint,
     verify_password,
 )
 from soukk_backend.domains.auth import authRepository
@@ -68,7 +71,7 @@ def build_verification_link(user: User) -> str:
     token = create_token(
         user.id, EMAIL_VERIFY_PURPOSE, timedelta(minutes=settings.email_verify_expire_minutes)
     )
-    return f"{settings.server_url}/auth/verify-email?token={token}"
+    return f"{settings.frontend_url}/verified?token={token}"
 
 
 async def verify_email(db: AsyncSession, token: str) -> User:
@@ -86,6 +89,35 @@ async def get_unverified_user(db: AsyncSession, email: str) -> User | None:
     if user is None or user.is_active:
         return None
     return user
+
+
+async def get_user_by_email(db: AsyncSession, email: str) -> User | None:
+    return await authRepository.get_by_email(db, email)
+
+
+def build_password_reset_link(user: User) -> str:
+    token = create_token(
+        user.id,
+        PASSWORD_RESET_PURPOSE,
+        timedelta(minutes=settings.password_reset_expire_minutes),
+        fingerprint=password_fingerprint(user.hashed_password),
+    )
+    return f"{settings.frontend_url}/reset-password?token={token}"
+
+
+async def reset_password(db: AsyncSession, token: str, new_password: str) -> None:
+    user_id = decode_token(token, PASSWORD_RESET_PURPOSE)
+    user = await authRepository.get_by_id(db, user_id)
+    if user is None:
+        raise InvalidToken()
+
+    claims = decode_claims(token, PASSWORD_RESET_PURPOSE)
+    if claims.get("pwd") != password_fingerprint(user.hashed_password):
+        raise InvalidToken()
+
+    hashed_password = await run_in_threadpool(hash_password, new_password)
+    # Whoever knew the old password may still hold a session, so end them all.
+    await authRepository.update_password_and_revoke_sessions(db, user, hashed_password)
 
 
 async def login(db: AsyncSession, data: LoginRequest) -> User:

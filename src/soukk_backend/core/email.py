@@ -17,14 +17,31 @@ mailer = FastMail(mail_config)
 
 
 async def send_verification_email(email: str, link: str) -> None:
-    message = MessageSchema(
+    await _send(
+        email,
         subject="Verify your Soukk account",
-        recipients=[email],
         body=(
             "<p>Welcome to Soukk!</p>"
             f'<p>Click <a href="{link}">here</a> to verify your email.</p>'
             f"<p>This link expires in {settings.email_verify_expire_minutes // 60} hours.</p>"
         ),
-        subtype=MessageType.html,
+    )
+
+
+async def send_password_reset_email(email: str, link: str) -> None:
+    await _send(
+        email,
+        subject="Reset your Soukk password",
+        body=(
+            f'<p>Click <a href="{link}">here</a> to reset your password.</p>'
+            f"<p>This link expires in {settings.password_reset_expire_minutes} minutes.</p>"
+            "<p>If you didn't ask for a password reset, you can ignore this email.</p>"
+        ),
+    )
+
+
+async def _send(email: str, subject: str, body: str) -> None:
+    message = MessageSchema(
+        subject=subject, recipients=[email], body=body, subtype=MessageType.html
     )
     await mailer.send_message(message)

@@ -97,3 +97,15 @@ async def revoke_family(db: AsyncSession, family_id: uuid.UUID) -> None:
         .values(revoked_at=func.now())
     )
     await db.commit()
+
+
+async def update_password_and_revoke_sessions(
+    db: AsyncSession, user: User, hashed_password: str
+) -> None:
+    user.hashed_password = hashed_password
+    await db.execute(
+        update(RefreshToken)
+        .where(RefreshToken.user_id == user.id, RefreshToken.revoked_at.is_(None))
+        .values(revoked_at=func.now())
+    )
+    await db.commit()
