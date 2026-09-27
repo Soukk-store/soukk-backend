@@ -1,8 +1,9 @@
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request
 from pydantic import EmailStr
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from soukk_backend.core.email import send_verification_email
+from soukk_backend.core.rateLimit import limiter
 from soukk_backend.database import get_db
 from soukk_backend.domains.auth import authService
 from soukk_backend.domains.auth.authExceptions import (
@@ -16,18 +17,22 @@ from soukk_backend.domains.auth.authResponseSchema import (
     MessageResponse,
     RegisterResponse,
 )
+from soukk_backend.settings import settings
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
 
 @router.get("/email-exists", response_model=EmailExistsResponse)
-async def email_exists(email: EmailStr, db: AsyncSession = Depends(get_db)):
+@limiter.limit(settings.rate_limit_email_exists)
+async def email_exists(request: Request, email: EmailStr, db: AsyncSession = Depends(get_db)):
     exists = await authService.email_exists(db, email)
     return EmailExistsResponse(exists=exists)
 
 
 @router.post("/register", status_code=201, response_model=RegisterResponse)
+@limiter.limit(settings.rate_limit_register)
 async def register(
+    request: Request,
     data: RegisterRequest,
     background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db),
@@ -56,7 +61,9 @@ async def verify_email(token: str, db: AsyncSession = Depends(get_db)):
 
 
 @router.post("/resend-verification", status_code=202, response_model=MessageResponse)
+@limiter.limit(settings.rate_limit_resend)
 async def resend_verification(
+    request: Request,
     data: ResendVerificationRequest,
     background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db),

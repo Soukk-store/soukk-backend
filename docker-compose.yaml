@@ -24,6 +24,9 @@ services:
       MAIL_PORT: ${MAIL_PORT}
       MAIL_STARTTLS: ${MAIL_STARTTLS}
       MAIL_SSL_TLS: ${MAIL_SSL_TLS}
+      RATE_LIMIT_EMAIL_EXISTS: ${RATE_LIMIT_EMAIL_EXISTS}
+      RATE_LIMIT_REGISTER: ${RATE_LIMIT_REGISTER}
+      RATE_LIMIT_RESEND: ${RATE_LIMIT_RESEND}
     depends_on:
       postgres-db:
         condition: service_healthy

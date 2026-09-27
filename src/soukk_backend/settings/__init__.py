@@ -32,6 +32,10 @@ class Settings(BaseSettings):
     mail_starttls: bool
     mail_ssl_tls: bool
 
+    rate_limit_email_exists: str
+    rate_limit_register: str
+    rate_limit_resend: str
+
     @property
     def is_dev(self) -> bool:
         return self.env.lower() == "development"

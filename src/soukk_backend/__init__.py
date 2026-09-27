@@ -1,10 +1,15 @@
 from fastapi import FastAPI
 import uvicorn
+from slowapi import _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
 
+from soukk_backend.core.rateLimit import limiter
 from soukk_backend.domains.auth.authController import router as auth_router
 from soukk_backend.settings import settings
 
 app = FastAPI(title="Soukk Backend API")
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 app.include_router(auth_router)
 
