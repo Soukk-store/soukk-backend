@@ -2,11 +2,20 @@ from fastapi.concurrency import run_in_threadpool
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from soukk_backend.core.security import hash_password
+from soukk_backend.core.security import (
+    create_email_verification_token,
+    decode_email_verification_token,
+    hash_password,
+)
 from soukk_backend.domains.auth import authRepository
-from soukk_backend.domains.auth.authExceptions import EmailAlreadyExists, PhoneAlreadyExists
+from soukk_backend.domains.auth.authExceptions import (
+    EmailAlreadyExists,
+    InvalidVerificationToken,
+    PhoneAlreadyExists,
+)
 from soukk_backend.domains.auth.authRequestSchema import RegisterRequest
 from soukk_backend.domains.users.userModel import User
+from soukk_backend.settings import settings
 
 
 async def email_exists(db: AsyncSession, email: str) -> bool:
@@ -42,3 +51,25 @@ async def register(db: AsyncSession, data: RegisterRequest) -> User:
         if "phone" in constraint:
             raise PhoneAlreadyExists() from error
         raise
+
+
+def build_verification_link(user: User) -> str:
+    token = create_email_verification_token(user.id)
+    return f"{settings.server_url}/auth/verify-email?token={token}"
+
+
+async def verify_email(db: AsyncSession, token: str) -> User:
+    user_id = decode_email_verification_token(token)
+    user = await authRepository.get_by_id(db, user_id)
+    if user is None:
+        raise InvalidVerificationToken()
+    if user.is_active:
+        return user
+    return await authRepository.activate_user(db, user)
+
+
+async def get_unverified_user(db: AsyncSession, email: str) -> User | None:
+    user = await authRepository.get_by_email(db, email)
+    if user is None or user.is_active:
+        return None
+    return user

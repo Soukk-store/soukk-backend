@@ -23,3 +23,7 @@ class RegisterResponse(BaseModel):
 
 class EmailExistsResponse(BaseModel):
     exists: bool
+
+
+class MessageResponse(BaseModel):
+    message: str

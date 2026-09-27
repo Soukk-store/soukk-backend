@@ -1,7 +1,13 @@
+import uuid
+
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from soukk_backend.domains.users.userModel import User
+
+
+async def get_by_id(db: AsyncSession, user_id: uuid.UUID) -> User | None:
+    return await db.get(User, user_id)
 
 
 async def get_by_email(db: AsyncSession, email: str) -> User | None:
@@ -30,6 +36,13 @@ async def create_user(
         hashed_password=hashed_password,
     )
     db.add(user)
+    await db.commit()
+    await db.refresh(user)
+    return user
+
+
+async def activate_user(db: AsyncSession, user: User) -> User:
+    user.is_active = True
     await db.commit()
     await db.refresh(user)
     return user

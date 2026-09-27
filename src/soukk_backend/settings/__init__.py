@@ -1,5 +1,6 @@
 from functools import lru_cache
 
+from pydantic import EmailStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -18,6 +19,18 @@ class Settings(BaseSettings):
     db_user: str
     db_password: str
     db_name: str
+
+    jwt_secret: str
+    jwt_algorithm: str
+    email_verify_expire_minutes: int
+
+    mail_username: str
+    mail_password: str
+    mail_from: EmailStr
+    mail_server: str
+    mail_port: int
+    mail_starttls: bool
+    mail_ssl_tls: bool
 
     @property
     def is_dev(self) -> bool:
