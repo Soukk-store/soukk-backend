@@ -1,7 +1,7 @@
 import uuid
-from datetime import datetime
+from datetime import datetime, timedelta
 
-from sqlalchemy import func, select, update
+from sqlalchemy import func, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from soukk_backend.domains.auth.refreshTokenModel import RefreshToken
@@ -36,6 +36,8 @@ async def create_user(
         email=email,
         phone=phone,
         hashed_password=hashed_password,
+        # Registration sends the first verification email, so it starts the cooldown.
+        verification_email_sent_at=func.now(),
     )
     db.add(user)
     await db.commit()
@@ -97,6 +99,24 @@ async def revoke_family(db: AsyncSession, family_id: uuid.UUID) -> None:
         .values(revoked_at=func.now())
     )
     await db.commit()
+
+
+async def claim_email_slot(
+    db: AsyncSession, user_id: uuid.UUID, sent_at_column, cooldown: timedelta
+) -> bool:
+    # Check and update in one statement so two requests arriving together
+    # can't both pass the cooldown and send two emails.
+    result = await db.execute(
+        update(User)
+        .where(
+            User.id == user_id,
+            or_(sent_at_column.is_(None), sent_at_column < func.now() - cooldown),
+        )
+        .values({sent_at_column: func.now()})
+        .returning(User.id)
+    )
+    await db.commit()
+    return result.first() is not None
 
 
 async def update_password_and_revoke_sessions(

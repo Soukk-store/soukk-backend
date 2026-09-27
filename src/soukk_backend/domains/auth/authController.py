@@ -15,6 +15,7 @@ from soukk_backend.domains.auth.authExceptions import (
     PhoneAlreadyExists,
 )
 from soukk_backend.domains.auth.authRequestSchema import (
+    ChangePasswordRequest,
     ForgotPasswordRequest,
     LoginRequest,
     RefreshRequest,
@@ -81,7 +82,7 @@ async def resend_verification(
     background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db),
 ):
-    user = await authService.get_unverified_user(db, data.email)
+    user = await authService.claim_verification_email(db, data.email)
     if user is not None:
         link = authService.build_verification_link(user)
         background_tasks.add_task(send_verification_email, user.email, link)
@@ -103,7 +104,8 @@ async def login(request: Request, data: LoginRequest, db: AsyncSession = Depends
 
 
 @router.post("/refresh", response_model=TokenResponse)
-async def refresh(data: RefreshRequest, db: AsyncSession = Depends(get_db)):
+@limiter.limit(settings.rate_limit_refresh)
+async def refresh(request: Request, data: RefreshRequest, db: AsyncSession = Depends(get_db)):
     try:
         return await authService.refresh_session(db, data.refresh_token)
     except InvalidToken:
@@ -111,7 +113,8 @@ async def refresh(data: RefreshRequest, db: AsyncSession = Depends(get_db)):
 
 
 @router.post("/logout", status_code=204)
-async def logout(data: RefreshRequest, db: AsyncSession = Depends(get_db)):
+@limiter.limit(settings.rate_limit_logout)
+async def logout(request: Request, data: RefreshRequest, db: AsyncSession = Depends(get_db)):
     await authService.end_session(db, data.refresh_token)
 
 
@@ -128,7 +131,7 @@ async def forgot_password(
     background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db),
 ):
-    user = await authService.get_user_by_email(db, data.email)
+    user = await authService.claim_password_reset_email(db, data.email)
     if user is not None:
         link = authService.build_password_reset_link(user)
         background_tasks.add_task(send_password_reset_email, user.email, link)
@@ -137,10 +140,28 @@ async def forgot_password(
 
 
 @router.post("/reset-password", response_model=MessageResponse)
-async def reset_password(data: ResetPasswordRequest, db: AsyncSession = Depends(get_db)):
+@limiter.limit(settings.rate_limit_reset_password)
+async def reset_password(
+    request: Request, data: ResetPasswordRequest, db: AsyncSession = Depends(get_db)
+):
     try:
         await authService.reset_password(db, data.token, data.password)
     except InvalidToken:
         raise HTTPException(status_code=400, detail="Invalid or expired reset link")
 
     return MessageResponse(message="Password has been reset, please log in again")
+
+
+
+@router.post("/change-password", response_model=TokenResponse)
+@limiter.limit(settings.rate_limit_change_password)
+async def change_password(
+    request: Request,
+    data: ChangePasswordRequest,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    try:
+        return await authService.change_password(db, user, data)
+    except InvalidCredentials:
+        raise HTTPException(status_code=400, detail="Current password is incorrect")

@@ -25,6 +25,7 @@ class Settings(BaseSettings):
     jwt_algorithm: str
     email_verify_expire_minutes: int
     password_reset_expire_minutes: int
+    email_cooldown_seconds: int
     access_token_expire_minutes: int
     refresh_token_expire_days: int
 
@@ -41,6 +42,10 @@ class Settings(BaseSettings):
     rate_limit_resend: str
     rate_limit_login: str
     rate_limit_forgot_password: str
+    rate_limit_reset_password: str
+    rate_limit_change_password: str
+    rate_limit_refresh: str
+    rate_limit_logout: str
 
     @property
     def is_dev(self) -> bool:

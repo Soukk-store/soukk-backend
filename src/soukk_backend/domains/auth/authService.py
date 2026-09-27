@@ -25,7 +25,11 @@ from soukk_backend.domains.auth.authExceptions import (
     InvalidToken,
     PhoneAlreadyExists,
 )
-from soukk_backend.domains.auth.authRequestSchema import LoginRequest, RegisterRequest
+from soukk_backend.domains.auth.authRequestSchema import (
+    ChangePasswordRequest,
+    LoginRequest,
+    RegisterRequest,
+)
 from soukk_backend.domains.auth.authResponseSchema import TokenResponse
 from soukk_backend.domains.auth.refreshTokenModel import RefreshToken
 from soukk_backend.domains.users.userModel import User
@@ -84,15 +88,29 @@ async def verify_email(db: AsyncSession, token: str) -> User:
     return await authRepository.activate_user(db, user)
 
 
-async def get_unverified_user(db: AsyncSession, email: str) -> User | None:
+async def claim_verification_email(db: AsyncSession, email: str) -> User | None:
+    """Return the user if a verification email should be sent now, else None."""
     user = await authRepository.get_by_email(db, email)
     if user is None or user.is_active:
+        return None
+    if not await _claim_email_slot(db, user, User.verification_email_sent_at):
         return None
     return user
 
 
-async def get_user_by_email(db: AsyncSession, email: str) -> User | None:
-    return await authRepository.get_by_email(db, email)
+async def claim_password_reset_email(db: AsyncSession, email: str) -> User | None:
+    """Return the user if a password reset email should be sent now, else None."""
+    user = await authRepository.get_by_email(db, email)
+    if user is None:
+        return None
+    if not await _claim_email_slot(db, user, User.password_reset_email_sent_at):
+        return None
+    return user
+
+
+async def _claim_email_slot(db: AsyncSession, user: User, sent_at_column) -> bool:
+    cooldown = timedelta(seconds=settings.email_cooldown_seconds)
+    return await authRepository.claim_email_slot(db, user.id, sent_at_column, cooldown)
 
 
 def build_password_reset_link(user: User) -> str:
@@ -118,6 +136,19 @@ async def reset_password(db: AsyncSession, token: str, new_password: str) -> Non
     hashed_password = await run_in_threadpool(hash_password, new_password)
     # Whoever knew the old password may still hold a session, so end them all.
     await authRepository.update_password_and_revoke_sessions(db, user, hashed_password)
+
+
+async def change_password(
+    db: AsyncSession, user: User, data: ChangePasswordRequest
+) -> TokenResponse:
+    if not await run_in_threadpool(verify_password, data.current_password, user.hashed_password):
+        raise InvalidCredentials()
+
+    hashed_password = await run_in_threadpool(hash_password, data.new_password)
+    # End every session, then give the device that made the change a fresh
+    # one, so it stays logged in while all other devices are logged out.
+    await authRepository.update_password_and_revoke_sessions(db, user, hashed_password)
+    return await start_session(db, user, data.login_type)
 
 
 async def login(db: AsyncSession, data: LoginRequest) -> User:

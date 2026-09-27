@@ -102,3 +102,21 @@ class ResetPasswordRequest(BaseModel):
         if self.password != self.confirm_password:
             raise ValueError("Passwords do not match")
         return self
+
+
+class ChangePasswordRequest(BaseModel):
+    current_password: str
+    new_password: str = Field(min_length=8)
+    confirm_password: str
+    login_type: LoginType
+
+    @field_validator("new_password")
+    @classmethod
+    def validate_password_strength(cls, value: str) -> str:
+        return check_password_strength(value)
+
+    @model_validator(mode="after")
+    def passwords_match(self) -> "ChangePasswordRequest":
+        if self.new_password != self.confirm_password:
+            raise ValueError("Passwords do not match")
+        return self
