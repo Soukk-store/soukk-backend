@@ -4,19 +4,31 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from soukk_backend.core.email import send_verification_email
 from soukk_backend.core.rateLimit import limiter
+from soukk_backend.core.security import REFRESH_PURPOSE
 from soukk_backend.database import get_db
 from soukk_backend.domains.auth import authService
+from soukk_backend.domains.auth.authDependencies import get_current_user
 from soukk_backend.domains.auth.authExceptions import (
     EmailAlreadyExists,
-    InvalidVerificationToken,
+    EmailNotVerified,
+    InvalidCredentials,
+    InvalidToken,
     PhoneAlreadyExists,
 )
-from soukk_backend.domains.auth.authRequestSchema import RegisterRequest, ResendVerificationRequest
+from soukk_backend.domains.auth.authRequestSchema import (
+    LoginRequest,
+    RefreshRequest,
+    RegisterRequest,
+    ResendVerificationRequest,
+)
 from soukk_backend.domains.auth.authResponseSchema import (
     EmailExistsResponse,
     MessageResponse,
     RegisterResponse,
+    TokenResponse,
+    UserOut,
 )
+from soukk_backend.domains.users.userModel import User
 from soukk_backend.settings import settings
 
 router = APIRouter(prefix="/auth", tags=["auth"])
@@ -54,7 +66,7 @@ async def register(
 async def verify_email(token: str, db: AsyncSession = Depends(get_db)):
     try:
         await authService.verify_email(db, token)
-    except InvalidVerificationToken:
+    except InvalidToken:
         raise HTTPException(status_code=400, detail="Invalid or expired verification link")
 
     return MessageResponse(message="Email verified")
@@ -74,3 +86,31 @@ async def resend_verification(
         background_tasks.add_task(send_verification_email, user.email, link)
 
     return MessageResponse(message="If the account needs verification, an email has been sent")
+
+
+@router.post("/login", response_model=TokenResponse)
+@limiter.limit(settings.rate_limit_login)
+async def login(request: Request, data: LoginRequest, db: AsyncSession = Depends(get_db)):
+    try:
+        user = await authService.login(db, data)
+    except InvalidCredentials:
+        raise HTTPException(status_code=401, detail="Invalid email or password")
+    except EmailNotVerified:
+        raise HTTPException(status_code=403, detail="Email not verified")
+
+    return authService.create_session_tokens(user)
+
+
+@router.post("/refresh", response_model=TokenResponse)
+async def refresh(data: RefreshRequest, db: AsyncSession = Depends(get_db)):
+    try:
+        user = await authService.get_user_from_token(db, data.refresh_token, REFRESH_PURPOSE)
+    except InvalidToken:
+        raise HTTPException(status_code=401, detail="Invalid or expired refresh token")
+
+    return authService.create_session_tokens(user)
+
+
+@router.get("/me", response_model=UserOut)
+async def me(user: User = Depends(get_current_user)):
+    return user

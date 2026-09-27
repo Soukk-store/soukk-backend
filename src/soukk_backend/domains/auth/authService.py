@@ -1,19 +1,28 @@
+from datetime import timedelta
+
 from fastapi.concurrency import run_in_threadpool
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from soukk_backend.core.security import (
-    create_email_verification_token,
-    decode_email_verification_token,
+    ACCESS_PURPOSE,
+    EMAIL_VERIFY_PURPOSE,
+    REFRESH_PURPOSE,
+    create_token,
+    decode_token,
     hash_password,
+    verify_password,
 )
 from soukk_backend.domains.auth import authRepository
 from soukk_backend.domains.auth.authExceptions import (
     EmailAlreadyExists,
-    InvalidVerificationToken,
+    EmailNotVerified,
+    InvalidCredentials,
+    InvalidToken,
     PhoneAlreadyExists,
 )
-from soukk_backend.domains.auth.authRequestSchema import RegisterRequest
+from soukk_backend.domains.auth.authRequestSchema import LoginRequest, RegisterRequest
+from soukk_backend.domains.auth.authResponseSchema import TokenResponse
 from soukk_backend.domains.users.userModel import User
 from soukk_backend.settings import settings
 
@@ -54,15 +63,17 @@ async def register(db: AsyncSession, data: RegisterRequest) -> User:
 
 
 def build_verification_link(user: User) -> str:
-    token = create_email_verification_token(user.id)
+    token = create_token(
+        user.id, EMAIL_VERIFY_PURPOSE, timedelta(minutes=settings.email_verify_expire_minutes)
+    )
     return f"{settings.server_url}/auth/verify-email?token={token}"
 
 
 async def verify_email(db: AsyncSession, token: str) -> User:
-    user_id = decode_email_verification_token(token)
+    user_id = decode_token(token, EMAIL_VERIFY_PURPOSE)
     user = await authRepository.get_by_id(db, user_id)
     if user is None:
-        raise InvalidVerificationToken()
+        raise InvalidToken()
     if user.is_active:
         return user
     return await authRepository.activate_user(db, user)
@@ -72,4 +83,36 @@ async def get_unverified_user(db: AsyncSession, email: str) -> User | None:
     user = await authRepository.get_by_email(db, email)
     if user is None or user.is_active:
         return None
+    return user
+
+
+async def login(db: AsyncSession, data: LoginRequest) -> User:
+    user = await authRepository.get_by_email(db, data.email)
+    if user is None:
+        raise InvalidCredentials()
+
+    # Argon2 verification is CPU-heavy, same as hashing in register().
+    if not await run_in_threadpool(verify_password, data.password, user.hashed_password):
+        raise InvalidCredentials()
+
+    if not user.is_active:
+        raise EmailNotVerified()
+    return user
+
+
+def create_session_tokens(user: User) -> TokenResponse:
+    access_token = create_token(
+        user.id, ACCESS_PURPOSE, timedelta(minutes=settings.access_token_expire_minutes)
+    )
+    refresh_token = create_token(
+        user.id, REFRESH_PURPOSE, timedelta(days=settings.refresh_token_expire_days)
+    )
+    return TokenResponse(access_token=access_token, refresh_token=refresh_token)
+
+
+async def get_user_from_token(db: AsyncSession, token: str, purpose: str) -> User:
+    user_id = decode_token(token, purpose)
+    user = await authRepository.get_by_id(db, user_id)
+    if user is None or not user.is_active:
+        raise InvalidToken()
     return user

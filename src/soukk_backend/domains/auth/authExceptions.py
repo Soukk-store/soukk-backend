@@ -6,5 +6,13 @@ class PhoneAlreadyExists(Exception):
     pass
 
 
-class InvalidVerificationToken(Exception):
+class InvalidToken(Exception):
+    pass
+
+
+class InvalidCredentials(Exception):
+    pass
+
+
+class EmailNotVerified(Exception):
     pass
