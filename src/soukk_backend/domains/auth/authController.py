@@ -4,7 +4,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from soukk_backend.core.email import send_verification_email
 from soukk_backend.core.rateLimit import limiter
-from soukk_backend.core.security import REFRESH_PURPOSE
 from soukk_backend.database import get_db
 from soukk_backend.domains.auth import authService
 from soukk_backend.domains.auth.authDependencies import get_current_user
@@ -98,17 +97,20 @@ async def login(request: Request, data: LoginRequest, db: AsyncSession = Depends
     except EmailNotVerified:
         raise HTTPException(status_code=403, detail="Email not verified")
 
-    return authService.create_session_tokens(user)
+    return await authService.start_session(db, user, data.login_type)
 
 
 @router.post("/refresh", response_model=TokenResponse)
 async def refresh(data: RefreshRequest, db: AsyncSession = Depends(get_db)):
     try:
-        user = await authService.get_user_from_token(db, data.refresh_token, REFRESH_PURPOSE)
+        return await authService.refresh_session(db, data.refresh_token)
     except InvalidToken:
         raise HTTPException(status_code=401, detail="Invalid or expired refresh token")
 
-    return authService.create_session_tokens(user)
+
+@router.post("/logout", status_code=204)
+async def logout(data: RefreshRequest, db: AsyncSession = Depends(get_db)):
+    await authService.end_session(db, data.refresh_token)
 
 
 @router.get("/me", response_model=UserOut)

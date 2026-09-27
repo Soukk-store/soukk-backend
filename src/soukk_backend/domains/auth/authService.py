@@ -1,4 +1,4 @@
-from datetime import timedelta
+from datetime import UTC, datetime, timedelta
 
 from fastapi.concurrency import run_in_threadpool
 from sqlalchemy.exc import IntegrityError
@@ -10,6 +10,7 @@ from soukk_backend.core.security import (
     REFRESH_PURPOSE,
     create_token,
     decode_token,
+    decode_token_id,
     hash_password,
     verify_password,
 )
@@ -23,6 +24,7 @@ from soukk_backend.domains.auth.authExceptions import (
 )
 from soukk_backend.domains.auth.authRequestSchema import LoginRequest, RegisterRequest
 from soukk_backend.domains.auth.authResponseSchema import TokenResponse
+from soukk_backend.domains.auth.refreshTokenModel import RefreshToken
 from soukk_backend.domains.users.userModel import User
 from soukk_backend.settings import settings
 
@@ -100,12 +102,49 @@ async def login(db: AsyncSession, data: LoginRequest) -> User:
     return user
 
 
-def create_session_tokens(user: User) -> TokenResponse:
+async def start_session(db: AsyncSession, user: User, login_type: str) -> TokenResponse:
+    expires_at = datetime.now(UTC) + timedelta(days=settings.refresh_token_expire_days)
+    stored = await authRepository.create_refresh_token(db, user.id, login_type, expires_at)
+    return _build_tokens(user, stored)
+
+
+async def refresh_session(db: AsyncSession, refresh_token: str) -> TokenResponse:
+    token_id = decode_token_id(refresh_token, REFRESH_PURPOSE)
+    stored = await authRepository.get_refresh_token_for_update(db, token_id)
+    if stored is None:
+        raise InvalidToken()
+
+    if stored.revoked_at is not None:
+        # An already-rotated token being used again means it was probably
+        # stolen, so end the whole session for both the thief and the owner.
+        await authRepository.revoke_family(db, stored.family_id)
+        raise InvalidToken()
+
+    user = await authRepository.get_by_id(db, stored.user_id)
+    if user is None or not user.is_active:
+        raise InvalidToken()
+
+    expires_at = datetime.now(UTC) + timedelta(days=settings.refresh_token_expire_days)
+    new_stored = await authRepository.rotate_refresh_token(db, stored, expires_at)
+    return _build_tokens(user, new_stored)
+
+
+async def end_session(db: AsyncSession, refresh_token: str) -> None:
+    try:
+        token_id = decode_token_id(refresh_token, REFRESH_PURPOSE)
+    except InvalidToken:
+        return
+    stored = await authRepository.get_refresh_token_for_update(db, token_id)
+    if stored is not None:
+        await authRepository.revoke_family(db, stored.family_id)
+
+
+def _build_tokens(user: User, stored: RefreshToken) -> TokenResponse:
     access_token = create_token(
         user.id, ACCESS_PURPOSE, timedelta(minutes=settings.access_token_expire_minutes)
     )
     refresh_token = create_token(
-        user.id, REFRESH_PURPOSE, timedelta(days=settings.refresh_token_expire_days)
+        user.id, REFRESH_PURPOSE, stored.expires_at - datetime.now(UTC), token_id=stored.id
     )
     return TokenResponse(access_token=access_token, refresh_token=refresh_token)
 

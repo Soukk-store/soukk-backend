@@ -22,19 +22,34 @@ def verify_password(password: str, hashed_password: str) -> bool:
     return password_hash.verify(password, hashed_password)
 
 
-def create_token(user_id: uuid.UUID, purpose: str, expires_in: timedelta) -> str:
+def create_token(
+    user_id: uuid.UUID,
+    purpose: str,
+    expires_in: timedelta,
+    token_id: uuid.UUID | None = None,
+) -> str:
     expires_at = datetime.now(UTC) + expires_in
     payload = {"sub": str(user_id), "purpose": purpose, "exp": expires_at}
+    if token_id is not None:
+        payload["jti"] = str(token_id)
     return jwt.encode(payload, settings.jwt_secret, algorithm=settings.jwt_algorithm)
 
 
 def decode_token(token: str, purpose: str) -> uuid.UUID:
+    return _read_uuid_claim(token, purpose, "sub")
+
+
+def decode_token_id(token: str, purpose: str) -> uuid.UUID:
+    return _read_uuid_claim(token, purpose, "jti")
+
+
+def _read_uuid_claim(token: str, purpose: str, claim: str) -> uuid.UUID:
     try:
         payload = jwt.decode(token, settings.jwt_secret, algorithms=[settings.jwt_algorithm])
         # All tokens share one secret, so the purpose claim is what stops
         # e.g. a refresh token from being used as an access token.
         if payload.get("purpose") != purpose:
             raise InvalidToken()
-        return uuid.UUID(payload["sub"])
+        return uuid.UUID(payload[claim])
     except (jwt.InvalidTokenError, KeyError, ValueError) as error:
         raise InvalidToken() from error

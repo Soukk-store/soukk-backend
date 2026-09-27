@@ -1,8 +1,10 @@
 import uuid
+from datetime import datetime
 
-from sqlalchemy import select
+from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from soukk_backend.domains.auth.refreshTokenModel import RefreshToken
 from soukk_backend.domains.users.userModel import User
 
 
@@ -46,3 +48,52 @@ async def activate_user(db: AsyncSession, user: User) -> User:
     await db.commit()
     await db.refresh(user)
     return user
+
+
+async def create_refresh_token(
+    db: AsyncSession, user_id: uuid.UUID, login_type: str, expires_at: datetime
+) -> RefreshToken:
+    token_id = uuid.uuid4()
+    token = RefreshToken(
+        id=token_id,
+        user_id=user_id,
+        family_id=token_id,
+        login_type=login_type,
+        expires_at=expires_at,
+    )
+    db.add(token)
+    await db.commit()
+    return token
+
+
+async def get_refresh_token_for_update(db: AsyncSession, token_id: uuid.UUID) -> RefreshToken | None:
+    # Row lock so two concurrent refreshes with the same token can't both rotate it.
+    result = await db.execute(
+        select(RefreshToken).where(RefreshToken.id == token_id).with_for_update()
+    )
+    return result.scalar_one_or_none()
+
+
+async def rotate_refresh_token(
+    db: AsyncSession, old: RefreshToken, expires_at: datetime
+) -> RefreshToken:
+    old.revoked_at = func.now()
+    new = RefreshToken(
+        user_id=old.user_id,
+        family_id=old.family_id,
+        parent_id=old.id,
+        login_type=old.login_type,
+        expires_at=expires_at,
+    )
+    db.add(new)
+    await db.commit()
+    return new
+
+
+async def revoke_family(db: AsyncSession, family_id: uuid.UUID) -> None:
+    await db.execute(
+        update(RefreshToken)
+        .where(RefreshToken.family_id == family_id, RefreshToken.revoked_at.is_(None))
+        .values(revoked_at=func.now())
+    )
+    await db.commit()
