@@ -2,6 +2,8 @@ import re
 
 from pydantic import BaseModel, EmailStr, Field, field_validator, model_validator
 
+from soukk_backend.domains.auth.refreshTokenModel import LoginType
+
 # Lebanese mobile: +961 then 3 + 6 digits, or 70/71/76/78/79/81 + 6 digits
 PHONE_PATTERN = re.compile(r"^\+961(3|70|71|76|78|79|81)\d{6}$")
 
@@ -60,6 +62,7 @@ class ResendVerificationRequest(BaseModel):
 class LoginRequest(BaseModel):
     email: EmailStr
     password: str
+    login_type: LoginType
 
     @field_validator("email")
     @classmethod

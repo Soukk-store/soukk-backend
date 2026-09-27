@@ -17,6 +17,7 @@ if config.config_file_name is not None:
 # add your model's MetaData object here
 # for 'autogenerate' support
 from soukk_backend.database import Base
+from soukk_backend.domains.auth.refreshTokenModel import RefreshToken  # noqa: F401
 from soukk_backend.domains.users.userModel import User  # noqa: F401
 from soukk_backend.settings import settings
 
