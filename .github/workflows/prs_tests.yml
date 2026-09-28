@@ -2,7 +2,7 @@ name: Pull Request Pytest
 
 on:
   pull_request:
-    branches: [main, dev]
+    branches: [main, dev, staging]
 
 jobs:
   pytest:
