@@ -1,0 +1,51 @@
+name: Tests
+
+on:
+  pull_request:
+    branches: [main, dev]
+
+jobs:
+  pytest:
+    runs-on: ubuntu-latest
+
+    # The tests talk to a real Postgres and Redis; credentials match .env.example.
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: soukk_user
+          POSTGRES_PASSWORD: change-me
+          POSTGRES_DB: soukk_db
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U soukk_user"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+      redis:
+        image: redis:8
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+
+      - name: Install dependencies
+        run: uv sync --locked
+
+      # Settings have no defaults: every key comes from .env.
+      - name: Create .env
+        run: cp .env.example .env
+
+      - name: Run tests
+        run: uv run pytest
