@@ -56,19 +56,20 @@ async def clean_state():
 
 @pytest.fixture(autouse=True)
 def outbox(monkeypatch) -> list[dict]:
-    """Capture emails instead of sending them. Autouse, so no test can send real mail."""
+    """Capture queued emails instead of pushing them to Celery. Autouse, so no test
+    needs a worker or can send real mail."""
     sent: list[dict] = []
 
-    def capture(kind: str):
-        async def fake_send(email: str, *details: str) -> None:
-            link = details[-1]  # (first_name, link)
+    class FakeTask:
+        def __init__(self, kind: str):
+            self.kind = kind
+
+        def delay(self, email: str, first_name: str, link: str) -> None:
             token = parse_qs(urlparse(link).query)["token"][0]
-            sent.append({"kind": kind, "email": email, "link": link, "token": token})
+            sent.append({"kind": self.kind, "email": email, "link": link, "token": token})
 
-        return fake_send
-
-    monkeypatch.setattr(authController, "send_verification_email", capture("verify"))
-    monkeypatch.setattr(authController, "send_password_reset_email", capture("reset"))
+    monkeypatch.setattr(authController, "send_verification_email_task", FakeTask("verify"))
+    monkeypatch.setattr(authController, "send_password_reset_email_task", FakeTask("reset"))
     return sent
 
 
