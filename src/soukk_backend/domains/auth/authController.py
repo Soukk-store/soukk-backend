@@ -1,9 +1,12 @@
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import EmailStr
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from soukk_backend.core.email import send_password_reset_email, send_verification_email
 from soukk_backend.core.rateLimit import limiter
+from soukk_backend.core.tasks.emailTask import (
+    send_password_reset_email_task,
+    send_verification_email_task,
+)
 from soukk_backend.database import get_db
 from soukk_backend.domains.auth import authService
 from soukk_backend.domains.auth.authDependencies import get_current_user
@@ -48,7 +51,6 @@ async def email_exists(request: Request, email: EmailStr, db: AsyncSession = Dep
 async def register(
     request: Request,
     data: RegisterRequest,
-    background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db),
 ):
     try:
@@ -59,7 +61,7 @@ async def register(
         raise HTTPException(status_code=409, detail="Phone number already registered")
 
     link = authService.build_verification_link(user)
-    background_tasks.add_task(send_verification_email, user.email, user.first_name, link)
+    send_verification_email_task.delay(user.email, user.first_name, link)
 
     return RegisterResponse(message="User created, please verify your account", user=user)
 
@@ -79,13 +81,12 @@ async def verify_email(token: str, db: AsyncSession = Depends(get_db)):
 async def resend_verification(
     request: Request,
     data: ResendVerificationRequest,
-    background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db),
 ):
     user = await authService.claim_verification_email(db, data.email)
     if user is not None:
         link = authService.build_verification_link(user)
-        background_tasks.add_task(send_verification_email, user.email, user.first_name, link)
+        send_verification_email_task.delay(user.email, user.first_name, link)
 
     return MessageResponse(message="If the account needs verification, an email has been sent")
 
@@ -128,13 +129,12 @@ async def me(user: User = Depends(get_current_user)):
 async def forgot_password(
     request: Request,
     data: ForgotPasswordRequest,
-    background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db),
 ):
     user = await authService.claim_password_reset_email(db, data.email)
     if user is not None:
         link = authService.build_password_reset_link(user)
-        background_tasks.add_task(send_password_reset_email, user.email, user.first_name, link)
+        send_password_reset_email_task.delay(user.email, user.first_name, link)
 
     return MessageResponse(message="If an account exists for this email, a reset link has been sent")
 
