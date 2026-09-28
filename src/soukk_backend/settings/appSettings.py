@@ -18,6 +18,7 @@ class Settings(EmailWorkerSettings, DatabaseSettings):
     email_cooldown_seconds: int
     access_token_expire_minutes: int
     refresh_token_expire_days: int
+    refresh_reuse_grace_seconds: int
 
     rate_limit_email_exists: str
     rate_limit_register: str

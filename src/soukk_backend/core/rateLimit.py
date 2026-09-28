@@ -14,4 +14,8 @@ limiter = Limiter(
     # If Redis is unreachable, keep limiting per process instead of failing
     # requests; slowapi switches back once Redis answers again.
     in_memory_fallback_enabled=True,
+    # slowapi talks to Redis with blocking calls on the event loop, so a Redis
+    # that hangs would freeze every request. Give up after 1 second instead; the
+    # failure switches the limiter to the in-memory fallback above.
+    storage_options={"socket_connect_timeout": 1, "socket_timeout": 1},
 )

@@ -15,6 +15,7 @@ from soukk_backend.core.security import (
     decode_token_id,
     hash_password,
     password_fingerprint,
+    user_id_from_claims,
     verify_password,
 )
 from soukk_backend.domains.auth import authRepository
@@ -124,12 +125,11 @@ def build_password_reset_link(user: User) -> str:
 
 
 async def reset_password(db: AsyncSession, token: str, new_password: str) -> None:
-    user_id = decode_token(token, PASSWORD_RESET_PURPOSE)
-    user = await authRepository.get_by_id(db, user_id)
+    claims = decode_claims(token, PASSWORD_RESET_PURPOSE)
+    user = await authRepository.get_by_id(db, user_id_from_claims(claims))
     if user is None:
         raise InvalidToken()
 
-    claims = decode_claims(token, PASSWORD_RESET_PURPOSE)
     if claims.get("pwd") != password_fingerprint(user.hashed_password):
         raise InvalidToken()
 
@@ -178,8 +178,13 @@ async def refresh_session(db: AsyncSession, refresh_token: str) -> TokenResponse
         raise InvalidToken()
 
     if stored.revoked_at is not None:
-        # An already-rotated token being used again means it was probably
-        # stolen, so end the whole session for both the thief and the owner.
+        # Reused seconds after rotation: the same client racing itself (two tabs,
+        # a retry after a lost response). Refuse it, but keep the session alive.
+        grace = timedelta(seconds=settings.refresh_reuse_grace_seconds)
+        if datetime.now(UTC) - stored.revoked_at < grace:
+            raise InvalidToken()
+        # Reused later means it was probably stolen, so end the whole session
+        # for both the thief and the owner.
         await authRepository.revoke_family(db, stored.family_id)
         raise InvalidToken()
 

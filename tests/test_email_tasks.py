@@ -1,5 +1,6 @@
 import pytest
 from aiosmtplib import SMTPException
+from fastapi_mail.errors import ConnectionErrors
 
 from soukk_backend.core.tasks import emailTask
 from soukk_backend.core.tasks.emailTask import (
@@ -31,17 +32,27 @@ def test_task_sends_the_matching_email(monkeypatch, task, sender_name):
 def test_task_is_durable_and_retries_smtp_failures(task, _):
     assert task.acks_late is True
     assert task.reject_on_worker_lost is True
+    assert ConnectionErrors in task.autoretry_for
     assert SMTPException in task.autoretry_for
     assert OSError in task.autoretry_for
     assert task.max_retries == 5
 
 
-def test_failing_send_is_retried_then_raised(monkeypatch):
+@pytest.mark.parametrize(
+    "error",
+    [
+        ConnectionErrors("SMTP server unreachable"),  # what fastapi-mail raises on connect/login
+        SMTPException("too many emails per second"),
+        OSError("connection reset"),
+    ],
+    ids=["connection", "smtp", "network"],
+)
+def test_failing_send_is_retried_then_raised(monkeypatch, error):
     attempts = []
 
     async def failing_sender(*args):
         attempts.append(args)
-        raise SMTPException("server down")
+        raise error
 
     monkeypatch.setattr(emailTask, "send_verification_email", failing_sender)
     # Run in-process (no broker) and without the real backoff delays.
@@ -51,5 +62,5 @@ def test_failing_send_is_retried_then_raised(monkeypatch):
     result = send_verification_email_task.apply(args=("user@example.com", "Test", "http://link"))
 
     assert result.failed()
-    assert isinstance(result.result, SMTPException)
+    assert type(result.result) is type(error)
     assert len(attempts) == 1 + send_verification_email_task.max_retries

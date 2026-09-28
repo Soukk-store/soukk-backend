@@ -47,7 +47,11 @@ def create_token(
 
 
 def decode_token(token: str, purpose: str) -> uuid.UUID:
-    return _read_uuid_claim(decode_claims(token, purpose), "sub")
+    return user_id_from_claims(decode_claims(token, purpose))
+
+
+def user_id_from_claims(claims: dict) -> uuid.UUID:
+    return _read_uuid_claim(claims, "sub")
 
 
 def decode_token_id(token: str, purpose: str) -> uuid.UUID:

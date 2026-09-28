@@ -1,8 +1,10 @@
 import asyncio
+from datetime import timedelta
 
-from sqlalchemy import select
+from sqlalchemy import func, select, update
 
 from soukk_backend.domains.auth.refreshTokenModel import RefreshToken
+from soukk_backend.settings.appSettings import settings
 
 
 def bearer(token: str) -> dict:
@@ -75,9 +77,20 @@ async def test_access_token_cannot_be_used_to_refresh(client, logged_in):
     assert (await refresh(client, tokens["access_token"])).status_code == 401
 
 
-async def test_reusing_a_rotated_token_revokes_the_whole_family(client, logged_in):
+async def outlive_grace_period(db) -> None:
+    """Pretend every rotation happened long ago, past the reuse grace period."""
+    await db.execute(
+        update(RefreshToken)
+        .where(RefreshToken.revoked_at.is_not(None))
+        .values(revoked_at=func.now() - timedelta(seconds=settings.refresh_reuse_grace_seconds + 5))
+    )
+    await db.commit()
+
+
+async def test_reusing_a_rotated_token_revokes_the_whole_family(client, logged_in, db):
     tokens = await logged_in()
     rotated = (await refresh(client, tokens["refresh_token"])).json()
+    await outlive_grace_period(db)
 
     reuse = await refresh(client, tokens["refresh_token"])
     after_theft = await refresh(client, rotated["refresh_token"])
@@ -86,17 +99,18 @@ async def test_reusing_a_rotated_token_revokes_the_whole_family(client, logged_i
     assert after_theft.status_code == 401
 
 
-async def test_reuse_on_one_device_does_not_log_out_other_devices(client, logged_in, login):
+async def test_reuse_on_one_device_does_not_log_out_other_devices(client, logged_in, login, db):
     web = await logged_in(login_type="web")
     ios = (await login(login_type="ios")).json()
 
     await refresh(client, web["refresh_token"])
+    await outlive_grace_period(db)
     await refresh(client, web["refresh_token"])  # reuse: kills the web family
 
     assert (await refresh(client, ios["refresh_token"])).status_code == 200
 
 
-async def test_concurrent_refresh_with_the_same_token_succeeds_only_once(client, logged_in):
+async def test_two_tabs_refreshing_at_once_stay_logged_in(client, logged_in):
     tokens = await logged_in()
 
     responses = await asyncio.gather(
@@ -104,6 +118,19 @@ async def test_concurrent_refresh_with_the_same_token_succeeds_only_once(client,
     )
 
     assert sorted(r.status_code for r in responses) == [200, 401]
+    winner = next(r for r in responses if r.status_code == 200).json()
+    # The losing tab's reuse is within the grace period: the session survives.
+    assert (await refresh(client, winner["refresh_token"])).status_code == 200
+
+
+async def test_retry_after_a_lost_response_keeps_the_session(client, logged_in):
+    tokens = await logged_in()
+    lost = (await refresh(client, tokens["refresh_token"])).json()  # response never arrived
+
+    retry = await refresh(client, tokens["refresh_token"])
+
+    assert retry.status_code == 401
+    assert (await refresh(client, lost["refresh_token"])).status_code == 200
 
 
 async def test_logout_revokes_the_session(client, logged_in):

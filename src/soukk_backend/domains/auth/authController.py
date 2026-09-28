@@ -7,6 +7,7 @@ from soukk_backend.core.tasks.emailTask import (
     send_password_reset_email_task,
     send_verification_email_task,
 )
+from soukk_backend.core.tasks.enqueue import enqueue
 from soukk_backend.database import get_db
 from soukk_backend.domains.auth import authService
 from soukk_backend.domains.auth.authDependencies import get_current_user
@@ -61,7 +62,7 @@ async def register(
         raise HTTPException(status_code=409, detail="Phone number already registered")
 
     link = authService.build_verification_link(user)
-    send_verification_email_task.delay(user.email, user.first_name, link)
+    await enqueue(send_verification_email_task, user.email, user.first_name, link)
 
     return RegisterResponse(message="User created, please verify your account", user=user)
 
@@ -86,7 +87,7 @@ async def resend_verification(
     user = await authService.claim_verification_email(db, data.email)
     if user is not None:
         link = authService.build_verification_link(user)
-        send_verification_email_task.delay(user.email, user.first_name, link)
+        await enqueue(send_verification_email_task, user.email, user.first_name, link)
 
     return MessageResponse(message="If the account needs verification, an email has been sent")
 
@@ -134,7 +135,7 @@ async def forgot_password(
     user = await authService.claim_password_reset_email(db, data.email)
     if user is not None:
         link = authService.build_password_reset_link(user)
-        send_password_reset_email_task.delay(user.email, user.first_name, link)
+        await enqueue(send_password_reset_email_task, user.email, user.first_name, link)
 
     return MessageResponse(message="If an account exists for this email, a reset link has been sent")
 
@@ -150,7 +151,6 @@ async def reset_password(
         raise HTTPException(status_code=400, detail="Invalid or expired reset link")
 
     return MessageResponse(message="Password has been reset, please log in again")
-
 
 
 @router.post("/change-password", response_model=TokenResponse)

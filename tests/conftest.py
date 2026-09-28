@@ -63,8 +63,10 @@ def outbox(monkeypatch) -> list[dict]:
     class FakeTask:
         def __init__(self, kind: str):
             self.kind = kind
+            self.name = f"fake.{kind}"
 
-        def delay(self, email: str, first_name: str, link: str) -> None:
+        def apply_async(self, args: tuple, **options) -> None:
+            email, first_name, link = args
             token = parse_qs(urlparse(link).query)["token"][0]
             sent.append({"kind": self.kind, "email": email, "link": link, "token": token})
 

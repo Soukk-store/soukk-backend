@@ -1,14 +1,18 @@
 import asyncio
 
 from aiosmtplib import SMTPException
+from fastapi_mail.errors import ConnectionErrors
 
 from soukk_backend.core.celeryApp import celery_app
 from soukk_backend.core.email import send_password_reset_email, send_verification_email
 
-# SMTP errors (e.g. Mailtrap's "too many emails per second") and network errors
-# are retried after ~1s, 2s, 4s... (with jitter, capped at 10 minutes).
+# Retried after ~1s, 2s, 4s... (with jitter, capped at 10 minutes):
+# - ConnectionErrors: fastapi-mail wraps every failure to reach or log in to the
+#   SMTP server (down, timeout, refused) in this plain Exception subclass
+# - SMTPException: the server refused the message (e.g. "too many emails per second")
+# - OSError: network errors while sending
 RETRY_OPTIONS = {
-    "autoretry_for": (SMTPException, OSError),
+    "autoretry_for": (ConnectionErrors, SMTPException, OSError),
     "retry_backoff": True,
     "max_retries": 5,
 }
