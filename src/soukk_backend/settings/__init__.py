@@ -24,6 +24,7 @@ class Settings(BaseSettings):
     redis_host: str
     redis_port: int
     redis_rate_limit_db: int
+    redis_celery_db: int
 
     jwt_secret: str
     jwt_algorithm: str
@@ -66,6 +67,10 @@ class Settings(BaseSettings):
             f"postgresql+psycopg://{self.db_user}:{self.db_password}"
             f"@{self.db_host}:{self.db_port}/{self.db_name}"
         )
+
+    @property
+    def celery_broker_url(self) -> str:
+        return f"redis://{self.redis_host}:{self.redis_port}/{self.redis_celery_db}"
 
 
 @lru_cache

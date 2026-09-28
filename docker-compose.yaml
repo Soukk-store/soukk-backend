@@ -66,6 +66,32 @@ services:
     networks:
       - soukk-network
 
+  celery:
+    build: .
+    container_name: soukk-celery
+    restart: unless-stopped
+    command: ["celery", "-A", "soukk_backend.core.celeryApp", "worker", "--loglevel=INFO", "--concurrency=${CELERY_WORKER_CONCURRENCY}"]
+    env_file: .env
+    environment:
+      DB_HOST: ${DOCKER_DB_HOST}
+      DB_PORT: ${DOCKER_DB_PORT}
+      REDIS_HOST: ${DOCKER_REDIS_HOST}
+      REDIS_PORT: ${DOCKER_REDIS_PORT}
+    depends_on:
+      redis:
+        condition: service_healthy
+      soukk-backend:
+        condition: service_healthy
+    stop_grace_period: 30s
+    healthcheck:
+      test: ["CMD-SHELL", "celery -A soukk_backend.core.celeryApp inspect ping -d celery@$$HOSTNAME"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+    networks:
+      - soukk-network
+
 volumes:
   postgres_data:
   redis_data:
