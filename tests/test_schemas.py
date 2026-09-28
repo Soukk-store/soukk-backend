@@ -15,8 +15,8 @@ def register_body(**overrides) -> dict:
         "last_name": "User",
         "email": "user@example.com",
         "phone": "+96170123456",
-        "password": "secret123",
-        "confirm_password": "secret123",
+        "password": "Secret123!",
+        "confirm_password": "Secret123!",
         **overrides,
     }
 
@@ -47,10 +47,28 @@ def test_email_is_lowercased_and_names_stripped():
     assert data.first_name == "Test"
 
 
-@pytest.mark.parametrize("password", ["short1", "lettersonly", "12345678"])
-def test_weak_password_is_rejected(password):
-    with pytest.raises(ValidationError):
+@pytest.mark.parametrize(
+    ("password", "problem"),
+    [
+        ("Sh0rt!", "at least 8 characters"),
+        ("secret123!", "one uppercase letter"),
+        ("Secretpass!", "one number"),
+        ("Secret1234", "one symbol"),
+    ],
+)
+def test_weak_password_is_rejected(password, problem):
+    with pytest.raises(ValidationError, match=problem):
         RegisterRequest(**register_body(password=password, confirm_password=password))
+
+
+def test_error_lists_every_missing_rule():
+    with pytest.raises(ValidationError, match="at least 8 characters, one uppercase letter, one number, one symbol"):
+        RegisterRequest(**register_body(password="short", confirm_password="short"))
+
+
+@pytest.mark.parametrize("password", ["Secret123!", "My Pass 1#", "Pässwort9_"])
+def test_strong_password_is_accepted(password):
+    RegisterRequest(**register_body(password=password, confirm_password=password))
 
 
 def test_mismatched_passwords_are_rejected():
@@ -71,5 +89,5 @@ def test_reset_and_change_password_apply_the_same_rules():
         ResetPasswordRequest(token="t", password="weakpass", confirm_password="weakpass")
     with pytest.raises(ValidationError):
         ChangePasswordRequest(
-            current_password="old", new_password="secret123", confirm_password="other1234", login_type="web"
+            current_password="old", new_password="Secret123!", confirm_password="other1234", login_type="web"
         )

@@ -24,9 +24,9 @@ ONE_HOUR = timedelta(hours=1)
 
 
 def test_password_hash_verifies_only_the_right_password():
-    hashed = hash_password("secret123")
-    assert hashed != "secret123"
-    assert verify_password("secret123", hashed)
+    hashed = hash_password("Secret123!")
+    assert hashed != "Secret123!"
+    assert verify_password("Secret123!", hashed)
     assert not verify_password("wrong123", hashed)
 
 
@@ -91,6 +91,6 @@ def test_fingerprint_is_carried_in_claims():
 
 
 def test_fingerprint_changes_when_password_changes():
-    assert password_fingerprint(hash_password("secret123")) != password_fingerprint(
+    assert password_fingerprint(hash_password("Secret123!")) != password_fingerprint(
         hash_password("other1234")
     )

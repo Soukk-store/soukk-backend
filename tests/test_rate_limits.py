@@ -13,8 +13,8 @@ REGISTER_BODY = {
     "last_name": "User",
     "email": "user@example.com",
     "phone": "+96170999999",
-    "password": "secret123",
-    "confirm_password": "secret123",
+    "password": "Secret123!",
+    "confirm_password": "Secret123!",
 }
 
 # Each request must pass validation: a 422 is rejected before the limiter counts it.
@@ -32,7 +32,7 @@ ENDPOINTS = [
     (
         "POST",
         "/auth/reset-password",
-        {"token": "x", "password": "secret123", "confirm_password": "secret123"},
+        {"token": "x", "password": "Secret123!", "confirm_password": "Secret123!"},
         settings.rate_limit_reset_password,
     ),
     ("POST", "/auth/refresh", {"refresh_token": "x"}, settings.rate_limit_refresh),
@@ -57,8 +57,8 @@ async def test_change_password_is_rate_limited(client, logged_in):
     headers = {"Authorization": f"Bearer {tokens['access_token']}"}
     body = {
         "current_password": "wrong1234",
-        "new_password": "newpass456",
-        "confirm_password": "newpass456",
+        "new_password": "Newpass456!",
+        "confirm_password": "Newpass456!",
         "login_type": "web",
     }
 

@@ -18,7 +18,7 @@ from soukk_backend.database import Base, SessionLocal, engine
 from soukk_backend.domains.auth import authController
 from soukk_backend.settings import settings
 
-PASSWORD = "secret123"
+PASSWORD = "Secret123!"
 
 # Guard against ever wiping a real database.
 assert settings.db_name.endswith("_test"), "tests must run against a *_test database"

@@ -8,9 +8,20 @@ from soukk_backend.domains.auth.refreshTokenModel import LoginType
 PHONE_PATTERN = re.compile(r"^\+961(3|70|71|76|78|79|81)\d{6}$")
 
 
+PASSWORD_MIN_LENGTH = 8
+PASSWORD_RULES = [
+    (r"[A-Z]", "one uppercase letter"),
+    (r"\d", "one number"),
+    (r"[^A-Za-z0-9\s]", "one symbol"),
+]
+
+
 def check_password_strength(value: str) -> str:
-    if not re.search(r"[A-Za-z]", value) or not re.search(r"\d", value):
-        raise ValueError("Password must contain at least one letter and one digit")
+    missing = [rule for pattern, rule in PASSWORD_RULES if not re.search(pattern, value)]
+    if len(value) < PASSWORD_MIN_LENGTH:
+        missing.insert(0, f"{PASSWORD_MIN_LENGTH} characters")
+    if missing:
+        raise ValueError(f"Password must contain at least {', '.join(missing)}")
     return value
 
 
@@ -19,7 +30,7 @@ class RegisterRequest(BaseModel):
     last_name: str = Field(min_length=1, max_length=50)
     email: EmailStr
     phone: str
-    password: str = Field(min_length=8)
+    password: str
     confirm_password: str
 
     @field_validator("first_name", "last_name", mode="before")
@@ -89,7 +100,7 @@ class ForgotPasswordRequest(BaseModel):
 
 class ResetPasswordRequest(BaseModel):
     token: str
-    password: str = Field(min_length=8)
+    password: str
     confirm_password: str
 
     @field_validator("password")
@@ -106,7 +117,7 @@ class ResetPasswordRequest(BaseModel):
 
 class ChangePasswordRequest(BaseModel):
     current_password: str
-    new_password: str = Field(min_length=8)
+    new_password: str
     confirm_password: str
     login_type: LoginType
 

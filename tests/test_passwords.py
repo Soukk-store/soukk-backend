@@ -7,8 +7,8 @@ from soukk_backend.core.security import EMAIL_VERIFY_PURPOSE, create_token
 from soukk_backend.domains.users.userModel import User
 from soukk_backend.settings import settings
 
-PASSWORD = "secret123"  # what the conftest fixtures register users with
-NEW_PASSWORD = "newpass456"
+PASSWORD = "Secret123!"  # what the conftest fixtures register users with
+NEW_PASSWORD = "Newpass456!"
 
 
 def bearer(token: str) -> dict:
@@ -101,7 +101,7 @@ async def test_reset_link_works_only_once(client, verified_user, outbox):
     token = reset_emails(outbox)[0]["token"]
 
     assert (await reset(client, token)).status_code == 200
-    assert (await reset(client, token, "another789")).status_code == 400
+    assert (await reset(client, token, "Another789!")).status_code == 400
 
 
 async def test_reset_rejects_garbage_and_wrong_purpose_tokens(client, verified_user, db):
