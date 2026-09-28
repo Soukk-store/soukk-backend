@@ -9,17 +9,20 @@ class Settings(BaseSettings):
         env_file=".env", env_file_encoding="utf-8", extra="ignore"
     )
 
-    env: str = "development"
-    port: int = 8000
-    web_workers: int = 1
-    server_url: str = "http://localhost:8000"
+    env: str
+    port: int
+    web_workers: int
+    server_url: str
     frontend_url: str
 
     db_host: str
-    db_port: int = 5432
+    db_port: int
     db_user: str
     db_password: str
     db_name: str
+
+    redis_host: str
+    redis_port: int
 
     jwt_secret: str
     jwt_algorithm: str
