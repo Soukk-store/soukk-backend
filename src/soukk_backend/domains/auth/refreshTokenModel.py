@@ -25,11 +25,16 @@ class RefreshToken(Base):
     # family_id is the first token of the login, so a whole session can be
     # revoked with one UPDATE instead of walking the parent chain.
     family_id: Mapped[uuid.UUID] = mapped_column(index=True, nullable=False)
+    # Indexed because deleting a token makes Postgres find its children to set
+    # their parent_id to NULL; without it every delete scans the whole table.
     parent_id: Mapped[uuid.UUID | None] = mapped_column(
-        ForeignKey("refresh_tokens.id", ondelete="SET NULL"), nullable=True
+        ForeignKey("refresh_tokens.id", ondelete="SET NULL"), index=True, nullable=True
     )
     login_type: Mapped[str] = mapped_column(String(20), nullable=False)
-    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    # Indexed for the nightly cleanup, which finds expired tokens by this column.
+    expires_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), index=True, nullable=False
+    )
     revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False

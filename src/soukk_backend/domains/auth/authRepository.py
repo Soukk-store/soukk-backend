@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime, timedelta
 
-from sqlalchemy import func, or_, select, update
+from sqlalchemy import delete, func, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from soukk_backend.domains.auth.refreshTokenModel import RefreshToken
@@ -129,3 +129,22 @@ async def update_password_and_revoke_sessions(
         .values(revoked_at=func.now())
     )
     await db.commit()
+
+
+async def delete_expired_refresh_tokens(db: AsyncSession, batch_size: int) -> int:
+    """Delete up to batch_size expired tokens; returns how many were deleted.
+
+    Only expired tokens: a revoked token must stay until it expires, so reusing it
+    is still recognised as theft and revokes its family. SKIP LOCKED passes over
+    rows a refresh request is using right now instead of waiting for them.
+    """
+    expired = (
+        select(RefreshToken.id)
+        .where(RefreshToken.expires_at < func.now())
+        .limit(batch_size)
+        .with_for_update(skip_locked=True)
+    )
+    result = await db.execute(
+        delete(RefreshToken).where(RefreshToken.id.in_(expired.scalar_subquery()))
+    )
+    return result.rowcount
