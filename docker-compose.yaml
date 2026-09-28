@@ -1,6 +1,8 @@
 services:
   backend:
+    # Builds the one image shared by backend and celery (same code, different command).
     build: .
+    image: soukk-app:latest
     container_name: soukk-backend
     restart: unless-stopped
     ports:
@@ -67,7 +69,9 @@ services:
       - soukk-network
 
   celery:
-    build: .
+    # Reuses the backend's image; never pulled, never built separately.
+    image: soukk-app:latest
+    pull_policy: never
     container_name: soukk-celery
     restart: unless-stopped
     command: ["celery", "-A", "soukk_backend.core.celeryApp", "worker", "--loglevel=INFO", "--concurrency=${CELERY_WORKER_CONCURRENCY}"]
@@ -80,7 +84,7 @@ services:
     depends_on:
       redis:
         condition: service_healthy
-      soukk-backend:
+      backend:
         condition: service_healthy
     stop_grace_period: 30s
     healthcheck:
