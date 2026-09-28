@@ -39,6 +39,7 @@ class Settings(BaseSettings):
     mail_port: int
     mail_starttls: bool
     mail_ssl_tls: bool
+    email_logo_url: str
 
     rate_limit_email_exists: str
     rate_limit_register: str

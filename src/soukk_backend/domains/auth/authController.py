@@ -59,7 +59,7 @@ async def register(
         raise HTTPException(status_code=409, detail="Phone number already registered")
 
     link = authService.build_verification_link(user)
-    background_tasks.add_task(send_verification_email, user.email, link)
+    background_tasks.add_task(send_verification_email, user.email, user.first_name, link)
 
     return RegisterResponse(message="User created, please verify your account", user=user)
 
@@ -85,7 +85,7 @@ async def resend_verification(
     user = await authService.claim_verification_email(db, data.email)
     if user is not None:
         link = authService.build_verification_link(user)
-        background_tasks.add_task(send_verification_email, user.email, link)
+        background_tasks.add_task(send_verification_email, user.email, user.first_name, link)
 
     return MessageResponse(message="If the account needs verification, an email has been sent")
 
@@ -134,7 +134,7 @@ async def forgot_password(
     user = await authService.claim_password_reset_email(db, data.email)
     if user is not None:
         link = authService.build_password_reset_link(user)
-        background_tasks.add_task(send_password_reset_email, user.email, link)
+        background_tasks.add_task(send_password_reset_email, user.email, user.first_name, link)
 
     return MessageResponse(message="If an account exists for this email, a reset link has been sent")
 

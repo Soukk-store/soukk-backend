@@ -1,6 +1,10 @@
+from pathlib import Path
+
 from fastapi_mail import ConnectionConfig, FastMail, MessageSchema, MessageType
 
 from soukk_backend.settings import settings
+
+TEMPLATE_FOLDER = Path(__file__).resolve().parent.parent / "templates" / "email"
 
 mail_config = ConnectionConfig(
     MAIL_USERNAME=settings.mail_username,
@@ -11,37 +15,52 @@ mail_config = ConnectionConfig(
     MAIL_STARTTLS=settings.mail_starttls,
     MAIL_SSL_TLS=settings.mail_ssl_tls,
     USE_CREDENTIALS=bool(settings.mail_username),
+    TEMPLATE_FOLDER=TEMPLATE_FOLDER,
 )
 
 mailer = FastMail(mail_config)
 
 
-async def send_verification_email(email: str, link: str) -> None:
+async def send_verification_email(email: str, first_name: str, link: str) -> None:
     await _send(
         email,
-        subject="Verify your Soukk account",
-        body=(
-            "<p>Welcome to Soukk!</p>"
-            f'<p>Click <a href="{link}">here</a> to verify your email.</p>'
-            f"<p>This link expires in {settings.email_verify_expire_minutes // 60} hours.</p>"
-        ),
+        subject="Confirm your Souk email",
+        template_name="verify_email.html",
+        values={
+            "first_name": first_name,
+            "verify_url": link,
+            "expires_in": format_duration(settings.email_verify_expire_minutes),
+        },
     )
 
 
-async def send_password_reset_email(email: str, link: str) -> None:
+async def send_password_reset_email(email: str, first_name: str, link: str) -> None:
     await _send(
         email,
-        subject="Reset your Soukk password",
-        body=(
-            f'<p>Click <a href="{link}">here</a> to reset your password.</p>'
-            f"<p>This link expires in {settings.password_reset_expire_minutes} minutes.</p>"
-            "<p>If you didn't ask for a password reset, you can ignore this email.</p>"
-        ),
+        subject="Reset your Souk password",
+        template_name="reset_password.html",
+        values={
+            "first_name": first_name,
+            "reset_url": link,
+            "expires_in": format_duration(settings.password_reset_expire_minutes),
+        },
     )
 
 
-async def _send(email: str, subject: str, body: str) -> None:
+async def _send(email: str, subject: str, template_name: str, values: dict) -> None:
+    """Every template also gets the recipient's email and the logo."""
     message = MessageSchema(
-        subject=subject, recipients=[email], body=body, subtype=MessageType.html
+        subject=subject,
+        recipients=[email],
+        template_body={"email": email, "logo_url": settings.email_logo_url, **values},
+        subtype=MessageType.html,
     )
-    await mailer.send_message(message)
+    await mailer.send_message(message, template_name=template_name)
+
+
+def format_duration(minutes: int) -> str:
+    """1440 -> "24 hours", 90 -> "90 minutes"."""
+    if minutes % 60:
+        return f"{minutes} minutes" if minutes != 1 else "1 minute"
+    hours = minutes // 60
+    return f"{hours} hours" if hours != 1 else "1 hour"

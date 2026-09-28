@@ -58,7 +58,8 @@ def outbox(monkeypatch) -> list[dict]:
     sent: list[dict] = []
 
     def capture(kind: str):
-        async def fake_send(email: str, link: str) -> None:
+        async def fake_send(email: str, *details: str) -> None:
+            link = details[-1]  # (first_name, link)
             token = parse_qs(urlparse(link).query)["token"][0]
             sent.append({"kind": kind, "email": email, "link": link, "token": token})
 
