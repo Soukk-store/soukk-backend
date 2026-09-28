@@ -9,14 +9,41 @@ authors = [
 requires-python = ">=3.14"
 dependencies = [
     "alembic>=1.20.0",
+    "celery[redis]>=5.6.3",
+    "email-validator>=2.3.0",
     "fastapi>=0.141.1",
+    "fastapi-mail>=1.6.8",
+    "psycopg[binary]>=3.3.6",
+    "pwdlib[argon2]>=0.3.1",
+    "pydantic-settings>=2.15.0",
     "pyjwt>=2.14.0",
+    "slowapi>=0.1.10",
+    "sqlalchemy>=2.0.54",
     "uvicorn>=0.53.0",
 ]
 
 [project.scripts]
-soukk-backend = "soukk_backend:main"
+soukk-backend = "soukk_backend.main:main"
 
 [build-system]
 requires = ["uv_build>=0.12.13,<0.13.0"]
 build-backend = "uv_build"
+
+[dependency-groups]
+dev = [
+    "httpx>=0.28.1",
+    "pytest>=9.1.1",
+    "pytest-asyncio>=1.4.0",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+# One event loop for the whole run: the app's database engine is created once
+# at import time, and its pooled connections belong to the loop that made them.
+asyncio_default_fixture_loop_scope = "session"
+asyncio_default_test_loop_scope = "session"
+filterwarnings = [
+    # Raised inside slowapi itself, not our code.
+    "ignore:'asyncio.iscoroutinefunction' is deprecated:DeprecationWarning:slowapi",
+]
