@@ -3,6 +3,8 @@ import os
 # Must run before the app is imported: settings are read once at import time,
 # and environment variables take precedence over .env.
 os.environ["DB_NAME"] = "soukk_test"
+# Separate Redis database too: limiter.reset() wipes every counter in it.
+os.environ["REDIS_RATE_LIMIT_DB"] = "15"
 
 import itertools
 from urllib.parse import parse_qs, urlparse

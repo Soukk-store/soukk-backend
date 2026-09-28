@@ -23,6 +23,7 @@ class Settings(BaseSettings):
 
     redis_host: str
     redis_port: int
+    redis_rate_limit_db: int
 
     jwt_secret: str
     jwt_algorithm: str
@@ -54,6 +55,10 @@ class Settings(BaseSettings):
     @property
     def is_dev(self) -> bool:
         return self.env.lower() == "development"
+
+    @property
+    def rate_limit_storage_url(self) -> str:
+        return f"redis://{self.redis_host}:{self.redis_port}/{self.redis_rate_limit_db}"
 
     @property
     def database_url(self) -> str:
