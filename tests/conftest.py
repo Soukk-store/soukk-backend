@@ -14,7 +14,7 @@ from httpx import ASGITransport, AsyncClient
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import create_async_engine
 
-from soukk_backend import app
+from soukk_backend.main import app
 from soukk_backend.core.rateLimit import limiter
 from soukk_backend.database import Base, SessionLocal, engine
 from soukk_backend.domains.auth import authController
