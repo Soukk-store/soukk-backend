@@ -1,7 +1,7 @@
 from slowapi import Limiter
 from slowapi.util import get_remote_address
 
-from soukk_backend.settings import settings
+from soukk_backend.settings.appSettings import settings
 
 # Counters live in Redis so every worker and every container shares them.
 limiter = Limiter(

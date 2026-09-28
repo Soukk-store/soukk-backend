@@ -1,6 +1,6 @@
 import pytest
 
-from soukk_backend.settings import settings
+from soukk_backend.settings.appSettings import settings
 
 
 def first_limit(limit: str) -> int:

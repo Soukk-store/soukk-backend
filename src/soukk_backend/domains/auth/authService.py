@@ -33,7 +33,7 @@ from soukk_backend.domains.auth.authRequestSchema import (
 from soukk_backend.domains.auth.authResponseSchema import TokenResponse
 from soukk_backend.domains.auth.refreshTokenModel import RefreshToken
 from soukk_backend.domains.users.userModel import User
-from soukk_backend.settings import settings
+from soukk_backend.settings.appSettings import settings
 
 
 async def email_exists(db: AsyncSession, email: str) -> bool:

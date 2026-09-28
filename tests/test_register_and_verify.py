@@ -4,7 +4,7 @@ from sqlalchemy import func, select, update
 
 from soukk_backend.core.security import ACCESS_PURPOSE, create_token
 from soukk_backend.domains.users.userModel import User
-from soukk_backend.settings import settings
+from soukk_backend.settings.appSettings import settings
 
 RESEND_MESSAGE = "If the account needs verification, an email has been sent"
 

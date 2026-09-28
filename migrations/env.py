@@ -19,7 +19,7 @@ if config.config_file_name is not None:
 from soukk_backend.database import Base
 from soukk_backend.domains.auth.refreshTokenModel import RefreshToken  # noqa: F401
 from soukk_backend.domains.users.userModel import User  # noqa: F401
-from soukk_backend.settings import settings
+from soukk_backend.settings.appSettings import settings
 
 target_metadata = Base.metadata
 

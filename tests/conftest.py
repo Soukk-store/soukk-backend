@@ -18,7 +18,7 @@ from soukk_backend.main import app
 from soukk_backend.core.rateLimit import limiter
 from soukk_backend.database import Base, SessionLocal, engine
 from soukk_backend.domains.auth import authController
-from soukk_backend.settings import settings
+from soukk_backend.settings.appSettings import settings
 
 PASSWORD = "Secret123!"
 

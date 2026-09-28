@@ -5,7 +5,7 @@ from sqlalchemy import func, select, update
 
 from soukk_backend.core.security import EMAIL_VERIFY_PURPOSE, create_token
 from soukk_backend.domains.users.userModel import User
-from soukk_backend.settings import settings
+from soukk_backend.settings.appSettings import settings
 
 PASSWORD = "Secret123!"  # what the conftest fixtures register users with
 NEW_PASSWORD = "Newpass456!"

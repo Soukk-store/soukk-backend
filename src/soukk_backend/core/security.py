@@ -6,7 +6,7 @@ import jwt
 from pwdlib import PasswordHash
 
 from soukk_backend.domains.auth.authExceptions import InvalidToken
-from soukk_backend.settings import settings
+from soukk_backend.settings.appSettings import settings
 
 password_hash = PasswordHash.recommended()
 

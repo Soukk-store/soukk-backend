@@ -34,7 +34,7 @@ from soukk_backend.domains.auth.authResponseSchema import (
     UserOut,
 )
 from soukk_backend.domains.users.userModel import User
-from soukk_backend.settings import settings
+from soukk_backend.settings.appSettings import settings
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 

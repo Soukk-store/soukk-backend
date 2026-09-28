@@ -1,10 +1,10 @@
 from celery import Celery
 
-from soukk_backend.settings import settings
+from soukk_backend.settings.workerSettings import worker_settings
 
 celery_app = Celery(
     "soukk",
-    broker=settings.celery_broker_url,
+    broker=worker_settings.celery_broker_url,
     include=["soukk_backend.core.tasks.emailTask"],
 )
 celery_app.conf.update(

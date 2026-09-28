@@ -17,7 +17,7 @@ from soukk_backend.core.security import (
     verify_password,
 )
 from soukk_backend.domains.auth.authExceptions import InvalidToken
-from soukk_backend.settings import settings
+from soukk_backend.settings.appSettings import settings
 
 USER_ID = uuid.uuid4()
 ONE_HOUR = timedelta(hours=1)

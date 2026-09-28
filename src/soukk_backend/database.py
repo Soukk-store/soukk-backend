@@ -3,7 +3,7 @@ from collections.abc import AsyncGenerator
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.orm import DeclarativeBase
 
-from soukk_backend.settings import settings
+from soukk_backend.settings.appSettings import settings
 
 
 class Base(DeclarativeBase):

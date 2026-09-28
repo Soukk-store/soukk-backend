@@ -5,7 +5,7 @@ from slowapi.errors import RateLimitExceeded
 
 from soukk_backend.core.rateLimit import limiter
 from soukk_backend.domains.auth.authController import router as auth_router
-from soukk_backend.settings import settings
+from soukk_backend.settings.appSettings import settings
 
 app = FastAPI(title="Soukk Backend API")
 app.state.limiter = limiter
