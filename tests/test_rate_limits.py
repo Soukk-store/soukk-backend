@@ -35,8 +35,8 @@ ENDPOINTS = [
         {"token": "x", "password": "Secret123!", "confirm_password": "Secret123!"},
         settings.rate_limit_reset_password,
     ),
-    ("POST", "/auth/refresh", {"refresh_token": "x"}, settings.rate_limit_refresh),
-    ("POST", "/auth/logout", {"refresh_token": "x"}, settings.rate_limit_logout),
+    ("POST", "/auth/refresh", None, settings.rate_limit_refresh),
+    ("POST", "/auth/logout", None, settings.rate_limit_logout),
 ]
 
 

@@ -77,7 +77,7 @@ def outbox(monkeypatch) -> list[dict]:
 
 @pytest.fixture
 async def client():
-    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as c:
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="https://test") as c:
         yield c
 
 
@@ -133,12 +133,15 @@ def login(client):
 
 @pytest.fixture
 def logged_in(verified_user, login):
-    """Verified user plus a session. Returns the token response body."""
+    """Verified user plus a session. Returns the access token and the refresh cookie."""
 
     async def _logged_in(email: str = "user@example.com", login_type: str = "web") -> dict:
         await verified_user(email)
         response = await login(email, login_type=login_type)
         assert response.status_code == 200
-        return response.json()
+        return {
+            "access_token": response.json()["access_token"],
+            "refresh_token": response.cookies["refresh_token"],
+        }
 
     return _logged_in

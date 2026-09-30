@@ -62,8 +62,8 @@ async def test_works_through_a_backlog_in_batches(verified_user, login, db):
 
 
 async def test_deleting_a_parent_keeps_its_live_child(client, logged_in, db):
-    tokens = await logged_in()
-    await client.post("/auth/refresh", json={"refresh_token": tokens["refresh_token"]})
+    await logged_in()
+    await client.post("/auth/refresh")  # the client sends its refresh cookie
     parent, child = await token_ids(db)
     await set_token(db, parent, expires_in=-DAY)
 

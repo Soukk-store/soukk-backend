@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Cookie, Depends, HTTPException, Request, Response
 from pydantic import EmailStr
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -22,7 +22,6 @@ from soukk_backend.domains.auth.authRequestSchema import (
     ChangePasswordRequest,
     ForgotPasswordRequest,
     LoginRequest,
-    RefreshRequest,
     RegisterRequest,
     ResendVerificationRequest,
     ResetPasswordRequest,
@@ -38,6 +37,30 @@ from soukk_backend.domains.users.userModel import User
 from soukk_backend.settings.appSettings import settings
 
 router = APIRouter(prefix="/auth", tags=["auth"])
+
+# The refresh token lives only in this HttpOnly cookie, out of reach of the
+# page's JavaScript. It is sent only to /auth routes.
+REFRESH_COOKIE = "refresh_token"
+REFRESH_COOKIE_PATH = "/auth"
+
+
+def send_tokens(response: Response, tokens: authService.SessionTokens) -> TokenResponse:
+    response.set_cookie(
+        REFRESH_COOKIE,
+        tokens.refresh_token,
+        max_age=settings.refresh_token_expire_days * 24 * 60 * 60,
+        path=REFRESH_COOKIE_PATH,
+        httponly=True,
+        secure=True,
+        samesite="lax",
+    )
+    return TokenResponse(access_token=tokens.access_token)
+
+
+def clear_refresh_cookie(response: Response) -> None:
+    response.delete_cookie(
+        REFRESH_COOKIE, path=REFRESH_COOKIE_PATH, httponly=True, secure=True, samesite="lax"
+    )
 
 
 @router.get("/email-exists", response_model=EmailExistsResponse)
@@ -94,7 +117,12 @@ async def resend_verification(
 
 @router.post("/login", response_model=TokenResponse)
 @limiter.limit(settings.rate_limit_login)
-async def login(request: Request, data: LoginRequest, db: AsyncSession = Depends(get_db)):
+async def login(
+    request: Request,
+    response: Response,
+    data: LoginRequest,
+    db: AsyncSession = Depends(get_db),
+):
     try:
         user = await authService.login(db, data)
     except InvalidCredentials:
@@ -102,22 +130,38 @@ async def login(request: Request, data: LoginRequest, db: AsyncSession = Depends
     except EmailNotVerified:
         raise HTTPException(status_code=403, detail="Email not verified")
 
-    return await authService.start_session(db, user, data.login_type)
+    return send_tokens(response, await authService.start_session(db, user, data.login_type))
 
 
 @router.post("/refresh", response_model=TokenResponse)
 @limiter.limit(settings.rate_limit_refresh)
-async def refresh(request: Request, data: RefreshRequest, db: AsyncSession = Depends(get_db)):
+async def refresh(
+    request: Request,
+    response: Response,
+    refresh_token: str | None = Cookie(None),
+    db: AsyncSession = Depends(get_db),
+):
+    if refresh_token is None:
+        raise HTTPException(status_code=401, detail="Invalid or expired refresh token")
     try:
-        return await authService.refresh_session(db, data.refresh_token)
+        tokens = await authService.refresh_session(db, refresh_token)
     except InvalidToken:
         raise HTTPException(status_code=401, detail="Invalid or expired refresh token")
+
+    return send_tokens(response, tokens)
 
 
 @router.post("/logout", status_code=204)
 @limiter.limit(settings.rate_limit_logout)
-async def logout(request: Request, data: RefreshRequest, db: AsyncSession = Depends(get_db)):
-    await authService.end_session(db, data.refresh_token)
+async def logout(
+    request: Request,
+    response: Response,
+    refresh_token: str | None = Cookie(None),
+    db: AsyncSession = Depends(get_db),
+):
+    if refresh_token is not None:
+        await authService.end_session(db, refresh_token)
+    clear_refresh_cookie(response)
 
 
 @router.get("/me", response_model=UserOut)
@@ -157,11 +201,14 @@ async def reset_password(
 @limiter.limit(settings.rate_limit_change_password)
 async def change_password(
     request: Request,
+    response: Response,
     data: ChangePasswordRequest,
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     try:
-        return await authService.change_password(db, user, data)
+        tokens = await authService.change_password(db, user, data)
     except InvalidCredentials:
         raise HTTPException(status_code=400, detail="Current password is incorrect")
+
+    return send_tokens(response, tokens)
