@@ -13,13 +13,10 @@ class EmailWorkerSettings(BrokerSettings):
     email_verify_expire_minutes: int
     password_reset_expire_minutes: int
 
-    mail_username: str
-    mail_password: str
+    mail_api_url: str
+    mail_api_token: str
     mail_from: EmailStr
-    mail_server: str
-    mail_port: int
-    mail_starttls: bool
-    mail_ssl_tls: bool
+    mail_timeout_seconds: float
     email_logo_url: str
 
 

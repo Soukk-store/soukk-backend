@@ -1,18 +1,20 @@
 import asyncio
 
-from aiosmtplib import SMTPException
-from fastapi_mail.errors import ConnectionErrors
+import httpx
 
 from soukk_backend.core.celeryApp import celery_app
-from soukk_backend.core.email import send_password_reset_email, send_verification_email
+from soukk_backend.core.email import (
+    MailServiceBusy,
+    send_password_reset_email,
+    send_verification_email,
+)
 
 # Retried after ~1s, 2s, 4s... (with jitter, capped at 10 minutes):
-# - ConnectionErrors: fastapi-mail wraps every failure to reach or log in to the
-#   SMTP server (down, timeout, refused) in this plain Exception subclass
-# - SMTPException: the server refused the message (e.g. "too many emails per second")
-# - OSError: network errors while sending
+# - httpx.TransportError: the mail API couldn't be reached (down, timeout, refused)
+# - MailServiceBusy: the mail API rate limited us or failed (429 / 5xx)
+# Other errors (bad token, bad request) fail at once: retrying won't fix them.
 RETRY_OPTIONS = {
-    "autoretry_for": (ConnectionErrors, SMTPException, OSError),
+    "autoretry_for": (httpx.TransportError, MailServiceBusy),
     "retry_backoff": True,
     "max_retries": 5,
 }

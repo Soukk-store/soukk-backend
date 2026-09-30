@@ -1,6 +1,6 @@
 import pytest
 
-from soukk_backend.core.email import format_duration, mail_config
+from soukk_backend.core.email import format_duration, render
 
 LINK = "http://localhost:3000/page?token=abc.def&x=1"
 
@@ -8,7 +8,7 @@ LINK = "http://localhost:3000/page?token=abc.def&x=1"
 TEMPLATES = {"verify_email.html": "verify_url", "reset_password.html": "reset_url"}
 
 
-def render(template_name: str, **overrides) -> str:
+def render_with(template_name: str, **overrides) -> str:
     values = {
         "first_name": "Test",
         "email": "user@example.com",
@@ -17,12 +17,12 @@ def render(template_name: str, **overrides) -> str:
         "logo_url": "https://example.com/logo.png",
         **overrides,
     }
-    return mail_config.template_engine().get_template(template_name).render(**values)
+    return render(template_name, values)
 
 
 @pytest.mark.parametrize("template_name", TEMPLATES)
 def test_template_fills_every_placeholder(template_name):
-    html = render(template_name)
+    html = render_with(template_name)
 
     assert "Hi Test," in html
     assert 'href="http://localhost:3000/page?token=abc.def&amp;x=1"' in html
@@ -34,7 +34,7 @@ def test_template_fills_every_placeholder(template_name):
 
 @pytest.mark.parametrize("template_name", TEMPLATES)
 def test_template_escapes_user_input(template_name):
-    html = render(template_name, first_name="<script>alert(1)</script>")
+    html = render_with(template_name, first_name="<script>alert(1)</script>")
 
     assert "<script>" not in html
     assert "&lt;script&gt;" in html
