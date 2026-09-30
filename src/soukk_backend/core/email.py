@@ -1,24 +1,18 @@
 from pathlib import Path
 
-from fastapi_mail import ConnectionConfig, FastMail, MessageSchema, MessageType
+import httpx
+from jinja2 import Environment, FileSystemLoader
 
 from soukk_backend.settings.emailWorkerSettings import email_worker_settings
 
 TEMPLATE_FOLDER = Path(__file__).resolve().parent.parent / "templates" / "email"
 
-mail_config = ConnectionConfig(
-    MAIL_USERNAME=email_worker_settings.mail_username,
-    MAIL_PASSWORD=email_worker_settings.mail_password,
-    MAIL_FROM=email_worker_settings.mail_from,
-    MAIL_SERVER=email_worker_settings.mail_server,
-    MAIL_PORT=email_worker_settings.mail_port,
-    MAIL_STARTTLS=email_worker_settings.mail_starttls,
-    MAIL_SSL_TLS=email_worker_settings.mail_ssl_tls,
-    USE_CREDENTIALS=bool(email_worker_settings.mail_username),
-    TEMPLATE_FOLDER=TEMPLATE_FOLDER,
-)
+# autoescape: user input (e.g. first_name) can't inject HTML into the email.
+templates = Environment(loader=FileSystemLoader(TEMPLATE_FOLDER), autoescape=True)
 
-mailer = FastMail(mail_config)
+
+class MailServiceBusy(Exception):
+    """The mail API is rate limiting us or failing (429 / 5xx): worth retrying."""
 
 
 async def send_verification_email(email: str, first_name: str, link: str) -> None:
@@ -47,15 +41,35 @@ async def send_password_reset_email(email: str, first_name: str, link: str) -> N
     )
 
 
+def render(template_name: str, values: dict) -> str:
+    return templates.get_template(template_name).render(**values)
+
+
 async def _send(email: str, subject: str, template_name: str, values: dict) -> None:
-    """Every template also gets the recipient's email and the logo."""
-    message = MessageSchema(
-        subject=subject,
-        recipients=[email],
-        template_body={"email": email, "logo_url": email_worker_settings.email_logo_url, **values},
-        subtype=MessageType.html,
+    """Send through the mail provider's HTTPS API.
+
+    Every template also gets the recipient's email and the logo.
+    """
+    html = render(
+        template_name,
+        {"email": email, "logo_url": email_worker_settings.email_logo_url, **values},
     )
-    await mailer.send_message(message, template_name=template_name)
+    async with httpx.AsyncClient(timeout=email_worker_settings.mail_timeout_seconds) as client:
+        response = await client.post(
+            email_worker_settings.mail_api_url,
+            headers={"Authorization": f"Bearer {email_worker_settings.mail_api_token}"},
+            json={
+                "from": {"email": email_worker_settings.mail_from},
+                "to": [{"email": email}],
+                "subject": subject,
+                "html": html,
+            },
+        )
+
+    if response.status_code == 429 or response.status_code >= 500:
+        raise MailServiceBusy(f"{response.status_code}: {response.text}")
+    # Any other error (bad token, bad request) won't fix itself: fail without retrying.
+    response.raise_for_status()
 
 
 def format_duration(minutes: int) -> str:

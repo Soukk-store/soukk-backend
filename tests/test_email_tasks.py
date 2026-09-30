@@ -1,7 +1,7 @@
+import httpx
 import pytest
-from aiosmtplib import SMTPException
-from fastapi_mail.errors import ConnectionErrors
 
+from soukk_backend.core.email import MailServiceBusy
 from soukk_backend.core.tasks import emailTask
 from soukk_backend.core.tasks.emailTask import (
     send_password_reset_email_task,
@@ -29,23 +29,20 @@ def test_task_sends_the_matching_email(monkeypatch, task, sender_name):
 
 
 @pytest.mark.parametrize(("task", "_"), TASKS)
-def test_task_is_durable_and_retries_smtp_failures(task, _):
+def test_task_is_durable_and_retries_mail_failures(task, _):
     assert task.acks_late is True
     assert task.reject_on_worker_lost is True
-    assert ConnectionErrors in task.autoretry_for
-    assert SMTPException in task.autoretry_for
-    assert OSError in task.autoretry_for
+    assert set(task.autoretry_for) == {httpx.TransportError, MailServiceBusy}
     assert task.max_retries == 5
 
 
 @pytest.mark.parametrize(
     "error",
     [
-        ConnectionErrors("SMTP server unreachable"),  # what fastapi-mail raises on connect/login
-        SMTPException("too many emails per second"),
-        OSError("connection reset"),
+        httpx.ConnectTimeout("mail API unreachable"),
+        MailServiceBusy("429: too many emails per second"),
     ],
-    ids=["connection", "smtp", "network"],
+    ids=["network", "busy"],
 )
 def test_failing_send_is_retried_then_raised(monkeypatch, error):
     attempts = []
@@ -64,3 +61,22 @@ def test_failing_send_is_retried_then_raised(monkeypatch, error):
     assert result.failed()
     assert type(result.result) is type(error)
     assert len(attempts) == 1 + send_verification_email_task.max_retries
+
+
+def test_bad_request_is_not_retried(monkeypatch):
+    """A wrong token or payload won't fix itself: fail on the first attempt."""
+    attempts = []
+
+    async def rejected_sender(*args):
+        attempts.append(args)
+        request = httpx.Request("POST", "https://mail.example")
+        raise httpx.HTTPStatusError(
+            "401", request=request, response=httpx.Response(401, request=request)
+        )
+
+    monkeypatch.setattr(emailTask, "send_verification_email", rejected_sender)
+
+    result = send_verification_email_task.apply(args=("user@example.com", "Test", "http://link"))
+
+    assert result.failed()
+    assert len(attempts) == 1
