@@ -1,3 +1,4 @@
+from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 
 from fastapi.concurrency import run_in_threadpool
@@ -31,10 +32,15 @@ from soukk_backend.domains.auth.authRequestSchema import (
     LoginRequest,
     RegisterRequest,
 )
-from soukk_backend.domains.auth.authResponseSchema import TokenResponse
 from soukk_backend.domains.auth.refreshTokenModel import RefreshToken
 from soukk_backend.domains.users.userModel import User
 from soukk_backend.settings.appSettings import settings
+
+
+@dataclass
+class SessionTokens:
+    access_token: str
+    refresh_token: str
 
 
 async def email_exists(db: AsyncSession, email: str) -> bool:
@@ -140,7 +146,7 @@ async def reset_password(db: AsyncSession, token: str, new_password: str) -> Non
 
 async def change_password(
     db: AsyncSession, user: User, data: ChangePasswordRequest
-) -> TokenResponse:
+) -> SessionTokens:
     if not await run_in_threadpool(verify_password, data.current_password, user.hashed_password):
         raise InvalidCredentials()
 
@@ -165,13 +171,13 @@ async def login(db: AsyncSession, data: LoginRequest) -> User:
     return user
 
 
-async def start_session(db: AsyncSession, user: User, login_type: str) -> TokenResponse:
+async def start_session(db: AsyncSession, user: User, login_type: str) -> SessionTokens:
     expires_at = datetime.now(UTC) + timedelta(days=settings.refresh_token_expire_days)
     stored = await authRepository.create_refresh_token(db, user.id, login_type, expires_at)
     return _build_tokens(user, stored)
 
 
-async def refresh_session(db: AsyncSession, refresh_token: str) -> TokenResponse:
+async def refresh_session(db: AsyncSession, refresh_token: str) -> SessionTokens:
     token_id = decode_token_id(refresh_token, REFRESH_PURPOSE)
     stored = await authRepository.get_refresh_token_for_update(db, token_id)
     if stored is None:
@@ -207,14 +213,14 @@ async def end_session(db: AsyncSession, refresh_token: str) -> None:
         await authRepository.revoke_family(db, stored.family_id)
 
 
-def _build_tokens(user: User, stored: RefreshToken) -> TokenResponse:
+def _build_tokens(user: User, stored: RefreshToken) -> SessionTokens:
     access_token = create_token(
         user.id, ACCESS_PURPOSE, timedelta(minutes=settings.access_token_expire_minutes)
     )
     refresh_token = create_token(
         user.id, REFRESH_PURPOSE, stored.expires_at - datetime.now(UTC), token_id=stored.id
     )
-    return TokenResponse(access_token=access_token, refresh_token=refresh_token)
+    return SessionTokens(access_token=access_token, refresh_token=refresh_token)
 
 
 async def get_user_from_token(db: AsyncSession, token: str, purpose: str) -> User:

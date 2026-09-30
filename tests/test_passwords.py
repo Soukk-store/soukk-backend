@@ -15,8 +15,13 @@ def bearer(token: str) -> dict:
     return {"Authorization": f"Bearer {token}"}
 
 
+def refresh_cookie(refresh_token: str) -> dict:
+    """Send this exact token, whatever the client's cookie jar holds."""
+    return {"Cookie": f"refresh_token={refresh_token}"}
+
+
 async def refresh(client, refresh_token: str):
-    return await client.post("/auth/refresh", json={"refresh_token": refresh_token})
+    return await client.post("/auth/refresh", headers=refresh_cookie(refresh_token))
 
 
 async def forgot(client, email: str = "user@example.com"):
@@ -152,14 +157,14 @@ async def test_change_password_rejects_wrong_current_password(client, logged_in)
 
 async def test_change_password_keeps_this_device_and_logs_out_others(client, logged_in, login):
     web = await logged_in(login_type="web")
-    ios = (await login(login_type="ios")).json()
+    ios = (await login(login_type="ios")).cookies
 
     response = await client.post(
         "/auth/change-password", json=change_body(), headers=bearer(web["access_token"])
     )
 
     assert response.status_code == 200
-    new_tokens = response.json()
+    new_tokens = response.cookies
     assert (await refresh(client, new_tokens["refresh_token"])).status_code == 200
     assert (await refresh(client, web["refresh_token"])).status_code == 401
     assert (await refresh(client, ios["refresh_token"])).status_code == 401

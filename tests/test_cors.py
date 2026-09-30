@@ -15,7 +15,8 @@ async def test_frontend_is_allowed(client):
 
     assert response.status_code == 200
     assert response.headers["access-control-allow-origin"] == settings.frontend_url
-    assert "access-control-allow-credentials" not in response.headers
+    # The browser may send the refresh token cookie.
+    assert response.headers["access-control-allow-credentials"] == "true"
 
 
 async def test_other_websites_are_refused(client):

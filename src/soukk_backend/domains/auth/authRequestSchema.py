@@ -85,10 +85,6 @@ class LoginRequest(BaseModel):
         return value.lower()
 
 
-class RefreshRequest(BaseModel):
-    refresh_token: str
-
-
 class ForgotPasswordRequest(BaseModel):
     email: EmailStr
 

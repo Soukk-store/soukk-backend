@@ -11,8 +11,13 @@ def bearer(token: str) -> dict:
     return {"Authorization": f"Bearer {token}"}
 
 
+def refresh_cookie(refresh_token: str) -> dict:
+    """Send this exact token, whatever the client's cookie jar holds."""
+    return {"Cookie": f"refresh_token={refresh_token}"}
+
+
 async def refresh(client, refresh_token: str):
-    return await client.post("/auth/refresh", json={"refresh_token": refresh_token})
+    return await client.post("/auth/refresh", headers=refresh_cookie(refresh_token))
 
 
 async def test_login_returns_tokens(verified_user, login):
@@ -22,7 +27,34 @@ async def test_login_returns_tokens(verified_user, login):
     assert response.status_code == 200
     body = response.json()
     assert body["token_type"] == "bearer"
-    assert body["access_token"] and body["refresh_token"]
+    assert body["access_token"]
+    assert "refresh_token" not in body
+
+
+async def test_refresh_token_is_an_http_only_cookie(verified_user, login):
+    await verified_user()
+    response = await login()
+
+    cookie = response.headers["set-cookie"].lower()
+    assert cookie.startswith("refresh_token=")
+    assert "httponly" in cookie
+    assert "secure" in cookie
+    assert "samesite=lax" in cookie
+    assert "path=/auth" in cookie
+
+
+async def test_browser_refreshes_with_its_cookie(client, logged_in):
+    tokens = await logged_in()
+
+    response = await client.post("/auth/refresh")
+
+    assert response.status_code == 200
+    assert response.json()["access_token"]
+    assert response.cookies["refresh_token"] != tokens["refresh_token"]
+
+
+async def test_refresh_without_cookie_is_refused(client):
+    assert (await client.post("/auth/refresh")).status_code == 401
 
 
 async def test_login_email_is_case_insensitive(verified_user, login):
@@ -89,7 +121,7 @@ async def outlive_grace_period(db) -> None:
 
 async def test_reusing_a_rotated_token_revokes_the_whole_family(client, logged_in, db):
     tokens = await logged_in()
-    rotated = (await refresh(client, tokens["refresh_token"])).json()
+    rotated = (await refresh(client, tokens["refresh_token"])).cookies
     await outlive_grace_period(db)
 
     reuse = await refresh(client, tokens["refresh_token"])
@@ -101,7 +133,7 @@ async def test_reusing_a_rotated_token_revokes_the_whole_family(client, logged_i
 
 async def test_reuse_on_one_device_does_not_log_out_other_devices(client, logged_in, login, db):
     web = await logged_in(login_type="web")
-    ios = (await login(login_type="ios")).json()
+    ios = (await login(login_type="ios")).cookies
 
     await refresh(client, web["refresh_token"])
     await outlive_grace_period(db)
@@ -118,14 +150,14 @@ async def test_two_tabs_refreshing_at_once_stay_logged_in(client, logged_in):
     )
 
     assert sorted(r.status_code for r in responses) == [200, 401]
-    winner = next(r for r in responses if r.status_code == 200).json()
+    winner = next(r for r in responses if r.status_code == 200).cookies
     # The losing tab's reuse is within the grace period: the session survives.
     assert (await refresh(client, winner["refresh_token"])).status_code == 200
 
 
 async def test_retry_after_a_lost_response_keeps_the_session(client, logged_in):
     tokens = await logged_in()
-    lost = (await refresh(client, tokens["refresh_token"])).json()  # response never arrived
+    lost = (await refresh(client, tokens["refresh_token"])).cookies  # response never arrived
 
     retry = await refresh(client, tokens["refresh_token"])
 
@@ -136,12 +168,13 @@ async def test_retry_after_a_lost_response_keeps_the_session(client, logged_in):
 async def test_logout_revokes_the_session(client, logged_in):
     tokens = await logged_in()
 
-    response = await client.post("/auth/logout", json={"refresh_token": tokens["refresh_token"]})
+    response = await client.post("/auth/logout", headers=refresh_cookie(tokens["refresh_token"]))
 
     assert response.status_code == 204
+    assert "max-age=0" in response.headers["set-cookie"].lower()
     assert (await refresh(client, tokens["refresh_token"])).status_code == 401
 
 
 async def test_logout_with_garbage_token_still_succeeds(client):
-    response = await client.post("/auth/logout", json={"refresh_token": "garbage"})
+    response = await client.post("/auth/logout", headers=refresh_cookie("garbage"))
     assert response.status_code == 204
