@@ -55,11 +55,11 @@ services:
     image: redis:8.10.2
     container_name: soukk-redis
     restart: unless-stopped
-    command: ["redis-server", "--port", "${DOCKER_REDIS_PORT}", "--appendonly", "yes"]
+    command: ["redis-server", "--port", "${DOCKER_REDIS_PORT}", "--appendonly", "yes", "--requirepass", "${REDIS_PASSWORD}"]
     ports:
       - "127.0.0.1:${REDIS_PORT}:${DOCKER_REDIS_PORT}"
     healthcheck:
-      test: ["CMD", "redis-cli", "-p", "${DOCKER_REDIS_PORT}", "ping"]
+      test: ["CMD", "redis-cli", "-p", "${DOCKER_REDIS_PORT}", "-a", "${REDIS_PASSWORD}", "--no-auth-warning", "ping"]
       interval: 10s
       timeout: 3s
       retries: 5
@@ -77,6 +77,7 @@ services:
     environment:
       REDIS_HOST: ${DOCKER_REDIS_HOST}
       REDIS_PORT: ${DOCKER_REDIS_PORT}
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
       REDIS_CELERY_DB: ${REDIS_CELERY_DB}
       EMAIL_VERIFY_EXPIRE_MINUTES: ${EMAIL_VERIFY_EXPIRE_MINUTES}
       PASSWORD_RESET_EXPIRE_MINUTES: ${PASSWORD_RESET_EXPIRE_MINUTES}
@@ -112,6 +113,7 @@ services:
     environment:
       REDIS_HOST: ${DOCKER_REDIS_HOST}
       REDIS_PORT: ${DOCKER_REDIS_PORT}
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
       REDIS_CELERY_DB: ${REDIS_CELERY_DB}
       DB_HOST: ${DOCKER_DB_HOST}
       DB_PORT: ${DOCKER_DB_PORT}
@@ -145,6 +147,7 @@ services:
     environment:
       REDIS_HOST: ${DOCKER_REDIS_HOST}
       REDIS_PORT: ${DOCKER_REDIS_PORT}
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
       REDIS_CELERY_DB: ${REDIS_CELERY_DB}
       TOKEN_CLEANUP_SCHEDULE: ${TOKEN_CLEANUP_SCHEDULE}
     depends_on:

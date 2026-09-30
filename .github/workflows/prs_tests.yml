@@ -23,18 +23,15 @@ jobs:
           --health-interval 5s
           --health-timeout 5s
           --health-retries 10
-      redis:
-        image: redis:8
-        ports:
-          - 6379:6379
-        options: >-
-          --health-cmd "redis-cli ping"
-          --health-interval 5s
-          --health-timeout 5s
-          --health-retries 10
 
     steps:
       - uses: actions/checkout@v4
+
+      # Not a service container: those can't pass --requirepass to redis-server.
+      - name: Start Redis
+        run: |
+          docker run -d --name redis -p 6379:6379 redis:8 --requirepass change-me
+          until docker exec redis redis-cli -a change-me --no-auth-warning ping; do sleep 1; done
 
       - uses: astral-sh/setup-uv@v6
         with:

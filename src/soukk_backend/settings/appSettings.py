@@ -36,7 +36,7 @@ class Settings(EmailWorkerSettings, DatabaseSettings):
 
     @property
     def rate_limit_storage_url(self) -> str:
-        return f"redis://{self.redis_host}:{self.redis_port}/{self.redis_rate_limit_db}"
+        return self.redis_url(self.redis_rate_limit_db)
 
 
 settings = Settings()

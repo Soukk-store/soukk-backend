@@ -1,3 +1,5 @@
+from urllib.parse import quote
+
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -10,11 +12,17 @@ class BrokerSettings(BaseSettings):
 
     redis_host: str
     redis_port: int
+    redis_password: str
     redis_celery_db: int
+
+    def redis_url(self, db: int) -> str:
+        # Quoted so a password with URL characters (@, /, :) can't break the URL.
+        password = quote(self.redis_password, safe="")
+        return f"redis://:{password}@{self.redis_host}:{self.redis_port}/{db}"
 
     @property
     def celery_broker_url(self) -> str:
-        return f"redis://{self.redis_host}:{self.redis_port}/{self.redis_celery_db}"
+        return self.redis_url(self.redis_celery_db)
 
 
 broker_settings = BrokerSettings()
