@@ -29,6 +29,11 @@ class MessageResponse(BaseModel):
     message: str
 
 
+class VerifyEmailResponse(BaseModel):
+    message: str
+    first_name: str
+
+
 class TokenResponse(BaseModel):
     access_token: str
     token_type: str = "bearer"
