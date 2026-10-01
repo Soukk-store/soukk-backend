@@ -32,6 +32,7 @@ from soukk_backend.domains.auth.authResponseSchema import (
     RegisterResponse,
     TokenResponse,
     UserOut,
+    VerifyEmailResponse,
 )
 from soukk_backend.domains.users.userModel import User
 from soukk_backend.settings.appSettings import settings
@@ -90,14 +91,14 @@ async def register(
     return RegisterResponse(message="User created, please verify your account", user=user)
 
 
-@router.get("/verify-email", response_model=MessageResponse)
+@router.get("/verify-email", response_model=VerifyEmailResponse)
 async def verify_email(token: str, db: AsyncSession = Depends(get_db)):
     try:
-        await authService.verify_email(db, token)
+        user = await authService.verify_email(db, token)
     except InvalidToken:
         raise HTTPException(status_code=400, detail="Invalid or expired verification link")
 
-    return MessageResponse(message="Email verified")
+    return VerifyEmailResponse(message="Email verified", first_name=user.first_name)
 
 
 @router.post("/resend-verification", status_code=202, response_model=MessageResponse)

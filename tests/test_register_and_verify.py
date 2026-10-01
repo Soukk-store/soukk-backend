@@ -58,6 +58,7 @@ async def test_verification_link_activates_user_and_can_be_reopened(client, regi
     second = await client.get("/auth/verify-email", params={"token": token})
 
     assert first.status_code == 200
+    assert first.json() == {"message": "Email verified", "first_name": "Test"}
     assert second.status_code == 200
     user = await db.scalar(select(User).where(User.email == "new@example.com"))
     assert user.is_active is True
