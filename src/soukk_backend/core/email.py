@@ -46,7 +46,7 @@ def render(template_name: str, values: dict) -> str:
 
 
 async def _send(email: str, subject: str, template_name: str, values: dict) -> None:
-    """Send through the mail provider's HTTPS API.
+    """Send through the Resend HTTPS API.
 
     Every template also gets the recipient's email and the images folder.
     """
@@ -59,8 +59,8 @@ async def _send(email: str, subject: str, template_name: str, values: dict) -> N
             email_worker_settings.mail_api_url,
             headers={"Authorization": f"Bearer {email_worker_settings.mail_api_token}"},
             json={
-                "from": {"email": email_worker_settings.mail_from},
-                "to": [{"email": email}],
+                "from": email_worker_settings.mail_from,
+                "to": [email],
                 "subject": subject,
                 "html": html,
             },
