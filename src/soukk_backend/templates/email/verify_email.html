@@ -4,102 +4,115 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="x-apple-disable-message-reformatting">
+<meta name="format-detection" content="telephone=no, date=no, address=no, email=no">
 <meta name="color-scheme" content="light">
 <meta name="supported-color-schemes" content="light">
-<title>Confirm your Souk email</title>
+<title>Confirm your email</title>
 <!--[if mso]><noscript><xml><o:OfficeDocumentSettings><o:PixelsPerInch>96</o:PixelsPerInch></o:OfficeDocumentSettings></xml></noscript><![endif]-->
 <link href="https://fonts.googleapis.com/css2?family=Young+Serif&family=Schibsted+Grotesk:wght@400;600;700&display=swap" rel="stylesheet">
 <style>
-  body { margin: 0; padding: 0; width: 100% !important; background: #EEE6D7; -webkit-text-size-adjust: 100%; -ms-text-size-adjust: 100%; }
+  body { margin: 0; padding: 0; width: 100% !important; background: #F6F1E8; -webkit-text-size-adjust: 100%; -ms-text-size-adjust: 100%; }
   table { border-collapse: collapse; mso-table-lspace: 0; mso-table-rspace: 0; }
   img { border: 0; line-height: 100%; outline: none; text-decoration: none; display: block; }
   a { color: #0E5A55; }
   /* Inline styles are the phone layout; wider screens get more room. */
   @media (min-width: 621px) {
-    .outer { padding: 32px 12px !important; }
-    .px { padding-left: 36px !important; padding-right: 36px !important; }
-    .h1 { font-size: 34px !important; line-height: 40px !important; }
+    .outer { padding: 40px 16px !important; }
+    .px { padding-left: 40px !important; padding-right: 40px !important; }
+    .title { font-size: 32px !important; line-height: 36px !important; }
     .btn a { display: inline-block !important; }
   }
 </style>
 </head>
-<body style="margin:0;padding:0;background:#EEE6D7;">
-<!-- Preheader (shows in the inbox preview) -->
-<div style="display:none;max-height:0;overflow:hidden;mso-hide:all;font-size:1px;line-height:1px;color:#EEE6D7;">Confirm your email to finish creating your Souk account. The link expires in {{ expires_in }}.&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;</div>
+<body style="margin:0;padding:0;background:#F6F1E8;">
+<!-- Inbox preview line -->
+<div style="display:none;max-height:0;overflow:hidden;mso-hide:all;font-size:1px;line-height:1px;color:#F6F1E8;">One tap and your Souk account is ready. The link works for {{ expires_in }}.&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;</div>
 
-<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#EEE6D7;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#F6F1E8;">
 <tr><td align="center" class="outer" style="padding:16px 8px;">
 <!--[if mso]><table role="presentation" width="600" align="center" cellpadding="0" cellspacing="0" border="0"><tr><td><![endif]-->
 
-<table role="presentation" class="container" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%;max-width:600px;background:#FFFFFF;border:1px solid #E0D5C2;border-radius:16px;overflow:hidden;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%;max-width:600px;background:#FFFDF8;border:1px solid #E0D5C2;border-radius:16px;border-collapse:separate;overflow:hidden;">
 
-  <!-- Header band -->
+  <!-- Teal header with the star lattice: logo, title, and the saffron arch rising from the bottom edge -->
   <tr>
-    <td bgcolor="#0E5A55" class="px" style="background:#0E5A55;padding:28px 20px;">
+    <td class="px" background="{{ asset_url }}/lattice.png" bgcolor="#0E5A55" style="background:#0E5A55 url('{{ asset_url }}/lattice.png') repeat;border-radius:15px 15px 0 0;padding:24px 24px 0;">
       <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
         <tr>
-          <td valign="middle" style="width:36px;padding-right:10px;">
-            <img src="{{ logo_url }}" width="30" height="30" alt="" style="width:30px;height:30px;">
+          <td colspan="2" style="padding-bottom:28px;">
+            <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+              <tr>
+                <td valign="middle" style="padding-right:8px;"><img src="{{ asset_url }}/logo-mark.png" width="28" height="28" alt="" style="width:28px;height:28px;"></td>
+                <td valign="middle" style="font-family:'Young Serif',Georgia,'Times New Roman',serif;font-size:24px;line-height:28px;color:#F6F1E8;">Souk</td>
+              </tr>
+            </table>
           </td>
-          <td valign="middle" class="serif" style="font-family:'Young Serif',Georgia,'Times New Roman',serif;font-size:26px;line-height:30px;color:#F6F1E8;">Souk</td>
+        </tr>
+        <tr>
+          <td valign="bottom" class="title" style="padding:0 16px 26px 0;font-family:'Young Serif',Georgia,'Times New Roman',serif;font-size:28px;line-height:32px;color:#F6F1E8;">Confirm your email</td>
+          <td valign="bottom" width="88" style="width:88px;">
+            <table role="presentation" width="88" cellpadding="0" cellspacing="0" border="0">
+              <tr>
+                <td width="88" height="80" align="center" valign="top" bgcolor="#E0A03A" style="width:88px;height:80px;background:#E0A03A;border-radius:44px 44px 0 0;padding-top:18px;">
+                  <img src="{{ asset_url }}/icon-mail.png" width="44" height="44" alt="" style="width:44px;height:44px;margin:0 auto;">
+                </td>
+              </tr>
+            </table>
+          </td>
         </tr>
       </table>
     </td>
   </tr>
-  <!-- Saffron rule -->
-  <tr><td bgcolor="#E0A03A" style="background:#E0A03A;height:6px;line-height:6px;font-size:6px;">&nbsp;</td></tr>
 
-  <!-- Body -->
+  <!-- Greeting and message -->
   <tr>
-    <td class="px" style="padding:28px 20px 8px;">
-      <h1 class="serif h1" style="margin:0 0 16px;font-family:'Young Serif',Georgia,'Times New Roman',serif;font-weight:400;font-size:28px;line-height:34px;color:#1D1A16;">Confirm your email</h1>
-      <p class="sans" style="margin:0 0 24px;font-family:'Schibsted Grotesk','Helvetica Neue',Arial,sans-serif;font-size:16px;line-height:26px;color:#1D1A16;">Hi {{ first_name }}, tap the button below to confirm your email and finish creating your Souk account.</p>
+    <td class="px" style="padding:32px 24px 0;font-family:'Schibsted Grotesk','Helvetica Neue',Arial,sans-serif;font-size:16px;line-height:26px;color:#1D1A16;">
+      <p style="margin:0 0 12px;">Hi {{ first_name }},</p>
+      <p style="margin:0 0 28px;">Confirm this is your email and your Souk account is ready: one basket for every shop in the souk.</p>
     </td>
   </tr>
 
-  <!-- Button -->
+  <!-- Button: full width on phones, sized to its label on wider screens -->
   <tr>
-    <td class="px btn" style="padding:0 20px;">
+    <td class="px btn" style="padding:0 24px;">
       <!--[if mso]>
-      <v:roundrect xmlns:v="urn:schemas-microsoft-com:vml" href="{{ verify_url }}" style="height:50px;v-text-anchor:middle;width:220px;" arcsize="50%" stroke="f" fillcolor="#0E5A55">
-        <w:anchorlock/><center style="color:#FFFFFF;font-family:Arial,sans-serif;font-size:16px;font-weight:bold;">Verify my email</center>
+      <v:roundrect xmlns:v="urn:schemas-microsoft-com:vml" href="{{ verify_url }}" style="height:52px;v-text-anchor:middle;width:240px;" arcsize="50%" stroke="f" fillcolor="#0E5A55">
+        <w:anchorlock/><center style="color:#FFFFFF;font-family:Arial,sans-serif;font-size:16px;font-weight:bold;">Confirm my email</center>
       </v:roundrect>
       <![endif]-->
       <!--[if !mso]><!-->
-      <a href="{{ verify_url }}" class="sans" style="display:block;background:#0E5A55;color:#FFFFFF;font-family:'Schibsted Grotesk','Helvetica Neue',Arial,sans-serif;font-size:16px;font-weight:700;line-height:50px;text-align:center;text-decoration:none;padding:0 28px;border-radius:999px;">Verify my email</a>
+      <a href="{{ verify_url }}" style="display:block;background:#0E5A55;color:#FFFFFF;font-family:'Schibsted Grotesk','Helvetica Neue',Arial,sans-serif;font-size:16px;font-weight:700;line-height:52px;text-align:center;text-decoration:none;padding:0 32px;border-radius:999px;">Confirm my email</a>
       <!--<![endif]-->
-      <p class="sans" style="margin:14px 0 0;font-family:'Schibsted Grotesk','Helvetica Neue',Arial,sans-serif;font-size:14px;line-height:20px;color:#5E564A;">The link expires in {{ expires_in }}.</p>
+      <p style="margin:12px 0 0;font-family:'Schibsted Grotesk','Helvetica Neue',Arial,sans-serif;font-size:14px;line-height:20px;color:#5E564A;">The link works for {{ expires_in }}.</p>
     </td>
   </tr>
 
-  <!-- Fallback link -->
+  <!-- Backup link -->
   <tr>
-    <td class="px" style="padding:24px 20px 0;">
-      <p class="sans" style="margin:0;font-family:'Schibsted Grotesk','Helvetica Neue',Arial,sans-serif;font-size:13px;line-height:20px;color:#5E564A;">Button not working? Paste this link into your browser:<br>
-        <a href="{{ verify_url }}" style="color:#0E5A55;word-break:break-all;">{{ verify_url }}</a>
-      </p>
-    </td>
-  </tr>
-
-  <!-- Divider -->
-  <tr>
-    <td class="px" style="padding:24px 20px;">
-      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
-        <tr><td style="border-top:1px solid #E0D5C2;font-size:0;line-height:0;">&nbsp;</td></tr>
+    <td class="px" style="padding:28px 24px 0;">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#F6F1E8;border-radius:12px;border-collapse:separate;">
+        <tr>
+          <td style="padding:16px 18px;font-family:'Schibsted Grotesk','Helvetica Neue',Arial,sans-serif;font-size:14px;line-height:21px;color:#5E564A;">
+            Button not working? Copy this link into your browser:<br>
+            <a href="{{ verify_url }}" style="color:#0E5A55;font-weight:600;word-break:break-all;">{{ verify_url }}</a>
+          </td>
+        </tr>
       </table>
     </td>
   </tr>
 
+  <!-- Safety note -->
   <tr>
-    <td class="px" style="padding:0 20px 32px;">
-      <p class="sans" style="margin:0;font-family:'Schibsted Grotesk','Helvetica Neue',Arial,sans-serif;font-size:14px;line-height:22px;color:#5E564A;">Didn't create a Souk account? You can ignore this email. Nobody can use your address without this link.</p>
+    <td class="px" style="padding:24px 24px 32px;font-family:'Schibsted Grotesk','Helvetica Neue',Arial,sans-serif;font-size:14px;line-height:22px;color:#5E564A;">
+      Didn&rsquo;t sign up for Souk? You can ignore this email. The account stays inactive without this link.
     </td>
   </tr>
 
   <!-- Footer -->
   <tr>
-    <td bgcolor="#F6F1E8" class="px sans" style="background:#F6F1E8;padding:20px 20px;font-family:'Schibsted Grotesk','Helvetica Neue',Arial,sans-serif;font-size:12px;line-height:19px;color:#5E564A;word-break:break-word;overflow-wrap:anywhere;">
-      Souk. You're getting this because someone signed up with {{ email }}.
+    <td class="px" bgcolor="#F6F1E8" style="background:#F6F1E8;border-top:1px solid #E0D5C2;border-radius:0 0 15px 15px;padding:20px 24px;font-family:'Schibsted Grotesk','Helvetica Neue',Arial,sans-serif;font-size:12px;line-height:19px;color:#5E564A;word-break:break-word;overflow-wrap:anywhere;">
+      <span style="font-family:'Young Serif',Georgia,'Times New Roman',serif;font-size:14px;color:#1D1A16;">Souk</span> &middot; Lebanon&rsquo;s shops, one street away.<br>
+      You&rsquo;re getting this because someone signed up with {{ email }}.
     </td>
   </tr>
 </table>
