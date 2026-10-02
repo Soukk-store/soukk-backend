@@ -17,7 +17,7 @@ class EmailWorkerSettings(BrokerSettings):
     mail_api_token: str
     mail_from: EmailStr
     mail_timeout_seconds: float
-    email_logo_url: str
+    email_asset_url: str
 
 
 email_worker_settings = EmailWorkerSettings()

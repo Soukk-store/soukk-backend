@@ -48,11 +48,11 @@ def render(template_name: str, values: dict) -> str:
 async def _send(email: str, subject: str, template_name: str, values: dict) -> None:
     """Send through the mail provider's HTTPS API.
 
-    Every template also gets the recipient's email and the logo.
+    Every template also gets the recipient's email and the images folder.
     """
     html = render(
         template_name,
-        {"email": email, "logo_url": email_worker_settings.email_logo_url, **values},
+        {"email": email, "asset_url": email_worker_settings.email_asset_url, **values},
     )
     async with httpx.AsyncClient(timeout=email_worker_settings.mail_timeout_seconds) as client:
         response = await client.post(

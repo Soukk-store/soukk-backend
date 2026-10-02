@@ -14,7 +14,7 @@ def render_with(template_name: str, **overrides) -> str:
         "email": "user@example.com",
         TEMPLATES[template_name]: LINK,
         "expires_in": "30 minutes",
-        "logo_url": "https://example.com/logo.png",
+        "asset_url": "https://example.com/assets",
         **overrides,
     }
     return render(template_name, values)
@@ -28,7 +28,7 @@ def test_template_fills_every_placeholder(template_name):
     assert 'href="http://localhost:3000/page?token=abc.def&amp;x=1"' in html
     assert "30 minutes" in html
     assert "user@example.com" in html
-    assert 'src="https://example.com/logo.png"' in html
+    assert 'src="https://example.com/assets/logo-mark.png"' in html
     assert "{{" not in html
 
 
