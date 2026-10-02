@@ -85,7 +85,7 @@ services:
       MAIL_API_TOKEN: ${MAIL_API_TOKEN}
       MAIL_FROM: ${MAIL_FROM}
       MAIL_TIMEOUT_SECONDS: ${MAIL_TIMEOUT_SECONDS}
-      EMAIL_LOGO_URL: ${EMAIL_LOGO_URL}
+      EMAIL_ASSET_URL: ${EMAIL_ASSET_URL}
     depends_on:
       redis:
         condition: service_healthy
