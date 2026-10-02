@@ -35,8 +35,8 @@ async def test_email_is_posted_to_the_mail_api(mail_api):
     assert str(request.url) == email_worker_settings.mail_api_url
     assert request.headers["authorization"] == f"Bearer {email_worker_settings.mail_api_token}"
     body = json.loads(request.content)
-    assert body["from"] == {"email": email_worker_settings.mail_from}
-    assert body["to"] == [{"email": "user@example.com"}]
+    assert body["from"] == email_worker_settings.mail_from
+    assert body["to"] == ["user@example.com"]
     assert body["subject"] == "Confirm your Souk email"
     assert 'href="http://link"' in body["html"]
 
