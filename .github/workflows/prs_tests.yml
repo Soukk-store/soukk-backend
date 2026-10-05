@@ -1,0 +1,48 @@
+name: Pull Request Pytest
+
+on:
+  pull_request:
+    branches: [main, dev, staging]
+
+jobs:
+  pytest:
+    runs-on: ubuntu-latest
+
+    # The tests talk to a real Postgres and Redis; credentials match .env.example.
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: soukk_user
+          POSTGRES_PASSWORD: change-me
+          POSTGRES_DB: soukk_db
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U soukk_user"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # Not a service container: those can't pass --requirepass to redis-server.
+      - name: Start Redis
+        run: |
+          docker run -d --name redis -p 6379:6379 redis:8 --requirepass change-me
+          until docker exec redis redis-cli -a change-me --no-auth-warning ping; do sleep 1; done
+
+      - uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+
+      - name: Install dependencies
+        run: uv sync --locked
+
+      # Settings have no defaults: every key comes from .env.
+      - name: Create .env
+        run: cp .env.example .env
+
+      - name: Run tests
+        run: uv run pytest
