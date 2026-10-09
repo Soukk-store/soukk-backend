@@ -9,7 +9,7 @@ The stack runs as **6 containers** with Docker Compose. The API and all three ba
 | Container | Role | Postgres | Redis | Secrets it holds |
 |---|---|---|---|---|
 | `soukk-backend` | HTTP API (FastAPI / uvicorn). Pushes slow work onto a queue instead of doing it inline. | Read / write | DB 0 (enqueue), DB 1 (rate limits) | DB password, JWT secret |
-| `soukk-celery` | Worker on the default `celery` queue. Sends emails over SMTP with retries. | None | DB 0 (consume) | Mail credentials only |
+| `soukk-celery` | Worker on the default `celery` queue. Sends emails through the Resend HTTPS API, retrying when it is rate limited or down. | None | DB 0 (consume) | Mail credentials only |
 | `soukk-celery-maintenance` | Worker on the `maintenance` queue. Runs batched cleanup jobs. | Delete only | DB 0 (consume) | DB password only |
 | `soukk-celery-beat` | Scheduler. Puts jobs on the `maintenance` queue on a cron schedule; never runs jobs itself. | None | DB 0 (enqueue) | None |
 | `soukk-postgres` | `postgres:16`, data persisted on the `postgres_data` volume. Also hosts a separate test database. | — | — | DB credentials |
