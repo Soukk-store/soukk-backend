@@ -10,6 +10,7 @@ class Settings(EmailWorkerSettings, DatabaseSettings):
     web_workers: int
     server_url: str
     frontend_url: str
+    default_image_key: str
 
     redis_rate_limit_db: int
 
