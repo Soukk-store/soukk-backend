@@ -6,6 +6,7 @@ from slowapi.errors import RateLimitExceeded
 
 from soukk_backend.core.rateLimit import limiter
 from soukk_backend.domains.auth.authController import router as auth_router
+from soukk_backend.domains.users.userController import router as users_router
 from soukk_backend.settings.appSettings import settings
 
 app = FastAPI(title="Soukk Backend API")
@@ -18,12 +19,13 @@ app.add_middleware(
     allow_origins=[settings.frontend_url],
     # Lets the browser send and store the refresh token cookie.
     allow_credentials=True,
-    allow_methods=["GET", "POST"],
+    allow_methods=["GET", "POST", "PUT", "DELETE"],
     allow_headers=["Authorization", "Content-Type"],
     max_age=600,  
 )
 
 app.include_router(auth_router)
+app.include_router(users_router)
 
 @app.get("/health")
 def health():
