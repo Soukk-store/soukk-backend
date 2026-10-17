@@ -12,6 +12,8 @@ from soukk_backend.settings.appSettings import settings
 
 router = APIRouter(prefix="/users", tags=["users"])
 
+IMAGE_TOO_LARGE_DETAIL = f"Image must be at most {settings.image_max_bytes // (1024 * 1024)} MB"
+
 
 @router.put("/me/image", response_model=UserOut)
 @limiter.limit(settings.rate_limit_image_upload)
@@ -24,10 +26,7 @@ async def update_image(
     try:
         return await userService.update_image(db, user, file)
     except ImageTooLarge:
-        raise HTTPException(
-            status_code=413,
-            detail=f"Image must be at most {settings.image_max_bytes // (1024 * 1024)} MB",
-        )
+        raise HTTPException(status_code=413, detail=IMAGE_TOO_LARGE_DETAIL)
     except InvalidImage:
         raise HTTPException(status_code=422, detail="File must be a JPEG, PNG or WebP image")
 
