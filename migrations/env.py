@@ -18,6 +18,7 @@ if config.config_file_name is not None:
 # for 'autogenerate' support
 from soukk_backend.database import Base
 from soukk_backend.domains.auth.refreshTokenModel import RefreshToken  # noqa: F401
+from soukk_backend.domains.locations.locationModel import UserLocation  # noqa: F401
 from soukk_backend.domains.users.userModel import User  # noqa: F401
 from soukk_backend.settings.appSettings import settings
 
