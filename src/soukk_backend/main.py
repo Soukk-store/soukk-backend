@@ -7,6 +7,7 @@ from slowapi.errors import RateLimitExceeded
 from soukk_backend.core.bodySizeLimit import BodySizeLimitMiddleware
 from soukk_backend.core.rateLimit import limiter
 from soukk_backend.domains.auth.authController import router as auth_router
+from soukk_backend.domains.locations.locationController import router as locations_router
 from soukk_backend.domains.users.userController import IMAGE_TOO_LARGE_DETAIL
 from soukk_backend.domains.users.userController import router as users_router
 from soukk_backend.settings.appSettings import settings
@@ -31,13 +32,14 @@ app.add_middleware(
     allow_origins=[settings.frontend_url],
     # Lets the browser send and store the refresh token cookie.
     allow_credentials=True,
-    allow_methods=["GET", "POST", "PUT", "DELETE"],
+    allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE"],
     allow_headers=["Authorization", "Content-Type"],
     max_age=600,  
 )
 
 app.include_router(auth_router)
 app.include_router(users_router)
+app.include_router(locations_router)
 
 @app.get("/health")
 def health():
