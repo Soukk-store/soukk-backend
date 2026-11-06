@@ -12,3 +12,5 @@ wheels/
 # Virtual environments
 .venv
 .env
+# Local design notes and plans
+system-design/
